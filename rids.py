@@ -1,6 +1,7 @@
 from __future__ import print_function
 import json
 import utils
+import matplotlib.pyplot as plt
 
 
 class Spectral:
@@ -93,7 +94,7 @@ class Rids:
         If two columns stores as freq, val (cal and baseline)
         If three columns stores as freq, ave, maxhold (event)
         """
-        with open(fn, 'r') as f:
+        with open(filename, 'r') as f:
             for line in f:
                 data = [float(x) for x in line.split()]
                 spec.freq.append(data[0])
