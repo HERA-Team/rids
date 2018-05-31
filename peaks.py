@@ -4,7 +4,7 @@ from scipy import signal
 import os.path
 
 
-def procfiles(files_to_proc, threshold=-15.0, cwt_range=[1, 7], rc_range, f_range=[20.0, 300.0],
+def procfiles(files_to_proc, threshold=-15.0, cwt_range=[1, 7], rc_range=[4, 4], f_range=[20.0, 300.0],
               title_prefix='', dir=None, saveit=False, yrange='minmax'):
     fmin = f_range[0]
     fmax = f_range[1]
@@ -21,7 +21,7 @@ def procfiles(files_to_proc, threshold=-15.0, cwt_range=[1, 7], rc_range, f_rang
         xlim = xlimg[np.where(xs[xlimg] < fmax)]
         x = xs[xlim]
         y = ys[xlim]
-        hipk = fp(x, y, threshold, cwt_range, rc_range)
+        hipk = fp(y, threshold, cwt_range, rc_range)
 
         plt.figure(fn)
         plt.xlabel('MHz')
@@ -57,14 +57,13 @@ def procfiles(files_to_proc, threshold=-15.0, cwt_range=[1, 7], rc_range, f_rang
             plt.savefig(ofn, dpi=200)
 
 
-def fp(x, y, threshold=-15.0, cwt_range=[1, 7], rc_range[4, 4]):
+def fp(y, threshold=-15.0, cwt_range=[1, 7], rc_range=[4, 4]):
     pkin = signal.find_peaks_cwt(y, np.arange(cwt_range[0], cwt_range[1]))
-    pkin = recenter(x, y, pkin, [4, 4])
-    hipk = pkin[np.where(y[pkin] > threshold)]
+    hipk = recenter_and_threshold(y, pkin, [4, 4], threshold)
     return hipk
 
 
-def recenter(x, y, pkin, rng):
+def recenter_and_threshold(y, pkin, rng, threshold):
     pkout = []
     dirout = []
     for p in pkin:
@@ -83,10 +82,11 @@ def recenter(x, y, pkin, rng):
                     dir = 'right'
                 else:
                     break
-        if newp not in pkout:
+
+        if (y[newp] > threshold) and (newp not in pkout):
             pkout.append(newp)
-        dirout.append(dir)
-    return np.array(pkout, dtype=int)
+            dirout.append(dir)
+    return pkout
 
 
 def ps(fns, fmin=20.0, fmax=300.0):

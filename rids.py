@@ -1,13 +1,16 @@
 from __future__ import print_function
 import json
 import utils
+import peaks
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 class Spectral:
     def __init__(self):
         self.comment = ''
         self.freq = []
+        self.val = []
 
 
 class Rids:
@@ -30,10 +33,10 @@ class Rids:
         self.val_unit = None
         self.comment = None
         self.cal = Spectral()
-        self.cal.val = []
         self.baseline_spectrum = Spectral()
-        self.baseline_spectrum.val = []
         self.events = {}
+        # --Other variables--
+        self.hipk = None
         self.sattr = {'cal': self.cal, 'baseline_spectrum': self.baseline_spectrum}
         self.sattr_fields = ['comment', 'freq', 'val']
         self.event_fields = ['comment', 'freq', 'ave', 'maxhold']
@@ -50,7 +53,7 @@ class Rids:
         for d in self.uattr:
             if d in data:
                 v = data[d].split()
-                setattr(self, d, v[0])
+                setattr(self, d, float(v[0]))
                 setattr(self, d + '_unit', v[1])
         for d in self.sattr:
             if d in data:
@@ -88,21 +91,28 @@ class Rids:
         with open(filename, 'w') as f:
             f.write(jsd)
 
-    def spectrum_reader(self, filename, spec, time_constant):
-        """
-        This reads in an ascii spectrum file.
-        If two columns stores as freq, val (cal and baseline)
-        If three columns stores as freq, ave, maxhold (event)
-        """
-        with open(filename, 'r') as f:
-            for line in f:
-                data = [float(x) for x in line.split()]
-                spec.freq.append(data[0])
-                if len(data) == 2:
-                    spec.val.append(data[1])
-                else:
-                    spec.ave.append(data[1])
-                    spec.maxhold.append(data[2])
+    def get_event(self, event, maxhold_fn, ave_fn):
+        maxhold = Spectral()
+        utils.spectrum_reader(maxhold_fn, maxhold)
+        ave = Spectral()
+        utils.spectrum_reader(ave_fn, ave)
+        self.peak_finder(maxhold)
+        self.events[event] = Spectral()
+        self.events[event].freq = list(np.array(maxhold.freq)[self.hipk])
+        self.events[event].ave = list(np.array(maxhold.val)[self.hipk])
+        self.events[event].maxhold = list(np.array(ave.val)[self.hipk])
+
+    def peak_finder(self, spec, cwt_range=[1, 7], rc_range=[4, 4]):
+        self.hipk_freq = spec.freq
+        self.hipk_val = spec.val
+        self.hipk = peaks.fp(spec.val, self.threshold, cwt_range, rc_range)
+
+    def peak_viewer(self):
+        if self.hipk is None:
+            print("No peaks sought.")
+            return
+        plt.plot(self.hipk_freq, self.hipk_val)
+        plt.plot(np.array(self.hipk_freq)[self.hipk], np.array(self.hipk_val)[self.hipk], 'kv')
 
     def apply_cal(self):
         print("CAL")
