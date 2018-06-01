@@ -3,9 +3,7 @@
     "detector":  "SNAP SNP011",
     "channel_width":  "1 kHz",
     "time_constant":  "1 s",
-    "time_stamp": "2458270.768",
-    "threshold": "-22.0 dBm",
-    "polarization": "E",
+    "threshold": "-10.0 dBm",
     "freq_unit": "MHz",
     "val_unit": "dBm",
     "comment":  ""

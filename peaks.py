@@ -70,6 +70,8 @@ def recenter_and_threshold(y, pkin, rng, threshold):
         dir = None
         newp = p
         for r in range(1, rng[0] + 1):
+            if p - r < 0:
+                break
             if y[p - r] > y[newp]:
                 newp = p - r
                 dir = 'left'
@@ -77,6 +79,8 @@ def recenter_and_threshold(y, pkin, rng, threshold):
                 break
         if dir is None:
             for r in range(1, rng[0] + 1):
+                if p + r > len(y) - 1:
+                    break
                 if y[p + r] > y[newp]:
                     newp = p + r
                     dir = 'right'
