@@ -183,7 +183,7 @@ class Rids:
                 ftype, pol = utils.peel_type_polarization(af)
                 if ftype in ['ave', 'maxh']:
                     loop = True
-                    f[ftype][pol].append(af)
+                    f[ftype][pol].append(os.path.join(directory, af))
             for pol in self.polarizations:
                 if not len(f['ave'][pol]) or not len(f['maxh'][pol]):
                     continue
