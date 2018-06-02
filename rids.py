@@ -44,7 +44,7 @@ class Rids:
 
     def json_reader(self, filename):
         """
-        This will read a json file with a full or subset of structure entities
+        This will read a JSON file with a full or subset of structure entities
         """
         with open(filename, 'rb') as f:
             data = json.load(f)
@@ -168,29 +168,28 @@ class Rids:
                 clr = plt.plot(v.freq[:len(v.ave)], v.ave[:len(v.freq)], 'v')
                 plt.plot(v.freq, v.maxhold, 'v', color=clr[0].get_color())
 
-    def process_files(self, directory, obs_per_file=100, keep_completed=True):
-        available_files = sorted(os.listdir(directory))
-        ave_files = {'E': [], 'N': []}
-        maxhold_files = {'E': [], 'N': []}
-        for af in available_files:
-            if 'ave' not in af and 'max' not in af:
-                continue
-            pol = utils.peel_polarization(af)
-            if 'ave' in af:
-                ave_files[pol].append(af)
-            elif 'max' in af:
-                maxhold_files[pol].append(af)
-        for pol in self.polarizations:
-            if not len(ave_files[pol]) or not len(maxhold_files[pol]):
-                continue
-            time_stamp = utils.peel_time_stamp(ave_files[pol][0])
-            self.set(time_stamp=time_stamp)
-            self.get_event('baseline_' + pol, ave_files[pol][0], maxhold_files[pol][0], pol)
-            for a, m in zip(ave_files[pol][:obs_per_file], maxhold_files[pol][:obs_per_file]):
-                time_stamp = utils.peel_time_stamp(a) + pol
-                self.get_event(time_stamp, a, m, pol)
-                if not keep_completed:
+    def process_files(self, directory, obs_per_file=100):
+        loop = True
+        while (loop):
+            available_files = sorted(os.listdir(directory))
+            f = {'ave': {'E': [], 'N': []},
+                 'maxh': {'E': [], 'N': []}}
+            loop = False
+            for af in available_files:
+                ftype, pol = utils.peel_type_polarization(af)
+                if ftype in ['ave', 'maxh']:
+                    loop = True
+                    f[ftype][pol].append(af)
+            for pol in self.polarizations:
+                if not len(f['ave'][pol]) or not len(f['maxh'][pol]):
+                    continue
+                time_stamp = utils.peel_time_stamp(f['ave'][pol][0])
+                self.set(time_stamp=time_stamp)
+                self.get_event('baseline_' + pol, f['ave'][pol][0], f['maxh'][pol][0], pol)
+                for a, m in zip(f['ave'][pol][:obs_per_file], f['maxh'][pol][:obs_per_file]):
+                    time_stamp = utils.peel_time_stamp(a) + pol
+                    self.get_event(time_stamp, a, m, pol)
                     os.remove(a)
                     os.remove(m)
-        output_file = os.path.join(directory, str(self.time_stamp) + '.json')
-        self.json_writer(output_file)
+            output_file = os.path.join(directory, str(self.time_stamp) + '.json')
+            self.json_writer(output_file)

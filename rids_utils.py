@@ -4,8 +4,8 @@ from __future__ import print_function
 def spectrum_reader(filename, spec, polarization=None):
     """
     This reads in an ascii spectrum file.
-    If two columns stores as freq, val (cal and baseline)
-    If three columns stores as freq, ave, maxhold (event)
+    If two columns stores as freq, val
+    If three columns stores as freq, ave, maxhold
     """
     if filename is None:
         return
@@ -22,11 +22,17 @@ def spectrum_reader(filename, spec, polarization=None):
                 spec.maxhold.append(data[2])
 
 
-def peel_polarization(v):
-    if 'E' in v:
-        return 'E'
-    if 'N' in v:
-        return 'N'
+def peel_type_polarization(v):
+    ftype = None
+    pol = None
+    for t in ['ave', 'maxh', 'baseline']:
+        if t in v.lower():
+            ftype = t
+    if '_E' in v:
+        pol = 'E'
+    elif '_N' in v:
+        pol = 'N'
+    return ftype, pol
 
 
 def peel_time_stamp(v):
