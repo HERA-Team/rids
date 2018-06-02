@@ -128,9 +128,9 @@ class Rids:
 
     def get_event(self, event, ave_fn, maxhold_fn, polarization):
         ave = Spectral()
-        utils.spectrum_reader(ave_fn, ave)
+        utils.spectrum_reader(ave_fn, ave, polarization)
         maxhold = Spectral()
-        utils.spectrum_reader(maxhold_fn, maxhold)
+        utils.spectrum_reader(maxhold_fn, maxhold, polarization)
         self.events[event] = Spectral(polarization=polarization)
         if 'baseline' in event.lower():
             self.events[event].freq = ave.freq if len(ave.freq) > len(maxhold.freq) else maxhold.freq
@@ -142,7 +142,7 @@ class Rids:
             try:
                 self.events[event].ave = list(np.array(ave.val)[self.hipk])
             except IndexError:
-                print(event, len(maxhold.freq), len(ave.freq))
+                pass
             self.events[event].maxhold = list(np.array(maxhold.val)[self.hipk])
 
     def peak_finder(self, spec, cwt_range=[1, 7], rc_range=[4, 4]):
@@ -168,9 +168,13 @@ class Rids:
                 clr = plt.plot(v.freq[:len(v.ave)], v.ave[:len(v.freq)], 'v')
                 plt.plot(v.freq, v.maxhold, 'v', color=clr[0].get_color())
 
-    def process_files(self, directory, obs_per_file=100):
+    def process_files(self, directory, obs_per_file=100, max_loops=1000):
         loop = True
+        max_loop_ctr = 0
         while (loop):
+            max_loop_ctr += 1
+            if max_loop_ctr > max_loops:
+                break
             available_files = sorted(os.listdir(directory))
             f = {'ave': {'E': [], 'N': []},
                  'maxh': {'E': [], 'N': []}}
@@ -182,6 +186,8 @@ class Rids:
                     f[ftype][pol].append(af)
             for pol in self.polarizations:
                 if not len(f['ave'][pol]) or not len(f['maxh'][pol]):
+                    continue
+                elif len(f['ave'][pol]) != len(f['maxh'][pol]):
                     continue
                 time_stamp = utils.peel_time_stamp(f['ave'][pol][0])
                 self.set(time_stamp=time_stamp)
