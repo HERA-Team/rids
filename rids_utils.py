@@ -22,14 +22,14 @@ def spectrum_reader(filename, spec, polarization=None):
                 spec.maxhold.append(data[2])
 
 
-def peal_polarization(v):
+def peel_polarization(v):
     if 'E' in v:
         return 'E'
     if 'N' in v:
         return 'N'
 
 
-def peal_time_stamp(v):
+def peel_time_stamp(v):
     ts = "{}-{}".format(v.split('_')[0], v.split('_')[1])
     return ts
 

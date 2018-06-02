@@ -175,7 +175,7 @@ class Rids:
         for af in available_files:
             if 'ave' not in af and 'max' not in af:
                 continue
-            pol = utils.peal_polarization(af)
+            pol = utils.peel_polarization(af)
             if 'ave' in af:
                 ave_files[pol].append(af)
             elif 'max' in af:
@@ -183,11 +183,11 @@ class Rids:
         for pol in self.polarizations:
             if not len(ave_files[pol]) or not len(maxhold_files[pol]):
                 continue
-            time_stamp = utils.peal_time_stamp(ave_files[pol][0])
+            time_stamp = utils.peel_time_stamp(ave_files[pol][0])
             self.set(time_stamp=time_stamp)
             self.get_event('baseline_' + pol, ave_files[pol][0], maxhold_files[pol][0], pol)
             for a, m in zip(ave_files[pol][:obs_per_file], maxhold_files[pol][:obs_per_file]):
-                time_stamp = utils.peal_time_stamp(a) + pol
+                time_stamp = utils.peel_time_stamp(a) + pol
                 self.get_event(time_stamp, a, m, pol)
                 if not keep_completed:
                     os.remove(a)
