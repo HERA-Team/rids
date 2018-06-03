@@ -22,10 +22,26 @@ def spectrum_reader(filename, spec, polarization=None):
                 spec.maxhold.append(data[2])
 
 
+def spectrum_plotter(e, x, y, fmt, clr):
+    import matplotlib.pyplot as plt
+    try:
+        _X = x[:len(y)]
+        if 'baseline' in e.lower():
+            plt.plot(_X, y, clr)
+        else:
+            plt.plot(_X, y, fmt, color=clr)
+    except ValueError:
+        _Y = y[:len(x)]
+        if 'baseline' in e.lower():
+            plt.plot(x, _Y, clr)
+        else:
+            plt.plot(x, _Y, fmt, color=clr)
+
+
 def peel_type_polarization(v):
     ftype = None
     pol = None
-    for t in ['ave', 'maxh', 'baseline']:
+    for t in ['ave', 'maxh', 'minh', 'baseline']:
         if t in v.lower():
             ftype = t
     if '_E' in v:
@@ -36,7 +52,8 @@ def peel_type_polarization(v):
 
 
 def peel_time_stamp(v):
-    ts = "{}-{}".format(v.split('_')[0], v.split('_')[1])
+    z = v.split('/')[-1]
+    ts = "{}-{}".format(z.split('_')[0], z.split('_')[1])
     return ts
 
 

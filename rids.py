@@ -20,29 +20,30 @@ class Rids:
     RF Interference Data System (RIDS)
     Reads/writes .rids/[.ridz] files, [zipped] JSON files with fields as described below.
     Any field may be omitted or missing.
-      This first set is header information - typically stored in a .rids file that gets read/rewritten
-        instrument:  description of the instrument used
-        receiver:  description of receiver used
-        channel_width:  RF bandwidth
-        channel_width_unit:  unit of bandwidth
-        vbw: video bandwidth (typically used for spectrum analyzer)
-        vbw_unit: unit of bandwidth
-        time_constant: averaging time/maxhold reset time
-            though not ideal, can be a descriptive word or word pair for e.g. ongoing maxhold, etc
-        time_constant_unit:  unit of time_constant
-        threshold:  value used to threshold peaks
-        threshold_unit: unit of threshold
-        freq_unit:  unit of frequency used in spectra
-        val_unit: unit of value used in spectra
-        comment:  general comment
-      These are typically set in data-taking session
-        time_stamp:  time_stamp for file/baseline data
-        cal:  calibration data by polarization/frequency
-        events:  baseline or ave/maxhold spectra
+      - This first set is header information - typically stored in a .rids file that gets read/rewritten
+            instrument:  description of the instrument used
+            receiver:  description of receiver used
+            channel_width:  RF bandwidth
+            channel_width_unit:  unit of bandwidth
+            vbw: video bandwidth (typically used for spectrum analyzer)
+            vbw_unit: unit of bandwidth
+            time_constant: averaging time/maxhold reset time
+                           though not ideal, can be a descriptive word or word pair
+                           for e.g. ongoing maxhold, etc
+            time_constant_unit:  unit of time_constant
+            threshold:  value used to threshold peaks
+            threshold_unit: unit of threshold
+            freq_unit:  unit of frequency used in spectra
+            val_unit: unit of value used in spectra
+            comment:  general comment; rid_reader appends, doesn't overwrite
+      - These are typically set in data-taking session
+            time_stamp:  time_stamp for file/baseline data event
+            cal:  calibration data by polarization/frequency
+            events:  baseline or ave/maxhold spectra
     """
-    dattr = ['instrument', 'receiver', 'time_stamp', 'freq_unit', 'val_unit']
+    dattr = ['instrument', 'receiver', 'time_stamp', 'comment', 'freq_unit', 'val_unit']
     uattr = ['channel_width', 'time_constant', 'threshold', 'vbw']
-    spectral_fields = ['comment', 'polarization', 'freq', 'val', 'ave', 'maxhold']
+    spectral_fields = ['comment', 'polarization', 'freq', 'val', 'ave', 'maxhold', 'minhold']
     polarizations = ['E', 'N']
 
     def __init__(self, comment=None):
@@ -78,11 +79,12 @@ class Rids:
             r_open = open
         with r_open(filename, 'rb') as f:
             data = json.load(f)
-        if 'comment' in data:
-            self.append_comment(data['comment'])
         for d in self.dattr:
             if d in data:
-                setattr(self, d, data[d])
+                if d == 'comment':
+                    self.append_comment(data[d])
+                else:
+                    setattr(self, d, data[d])
         for d in self.uattr:
             if d in data:
                 self._set_uattr(d, data[d])
@@ -118,7 +120,6 @@ class Rids:
         This writes a RID file with a full structure
         """
         ds = {}
-        ds['comment'] = self.comment
         for d in self.dattr:
             ds[d] = getattr(self, d)
         for d in self.uattr:
@@ -164,24 +165,54 @@ class Rids:
         else:
             self.comment += ('\n' + comment)
 
-    def get_event(self, event, ave_fn, maxhold_fn, polarization):
-        ave = Spectral()
-        utils.spectrum_reader(ave_fn, ave, polarization)
-        maxhold = Spectral()
-        utils.spectrum_reader(maxhold_fn, maxhold, polarization)
+    def get_event(self, event, polarization, ave_fn=None, maxh_fn=None, minh_fn=None):
+        if ave_fn is not None:
+            ave = Spectral()
+            utils.spectrum_reader(ave_fn, ave, polarization)
+        if maxh_fn is not None:
+            maxhold = Spectral()
+            utils.spectrum_reader(maxh_fn, maxhold, polarization)
+        if minh_fn is not None:
+            minhold = Spectral()
+            utils.spectrum_reader(minh_fn, minhold, polarization)
         self.events[event] = Spectral(polarization=polarization)
         if 'baseline' in event.lower():
-            self.events[event].freq = ave.freq if len(ave.freq) > len(maxhold.freq) else maxhold.freq
-            self.events[event].ave = ave.val
-            self.events[event].maxhold = maxhold.val
+            if ave_fn:
+                self.events[event].freq = ave.freq
+                self.events[event].ave = ave.val
+            if minh_fn:
+                if len(minhold.freq) > len(self.events[event].freq):
+                    self.events[event].freq = minhold.freq
+                self.events[event].minhold = minhold.val
+            if maxh_fn:
+                if len(maxhold.freq) > len(self.events[event].freq):
+                    self.events[event].freq = maxhold.freq
+                self.events[event].maxhold = maxhold.val
         else:
-            self.peak_finder(maxhold)
-            self.events[event].freq = list(np.array(maxhold.freq)[self.hipk])
-            try:
-                self.events[event].ave = list(np.array(ave.val)[self.hipk])
-            except IndexError:
-                pass
-            self.events[event].maxhold = list(np.array(maxhold.val)[self.hipk])
+            if maxh_fn:
+                self.peak_finder(maxhold)
+            elif minh_fn:
+                self.peak_finder(minhold)
+            elif ave_fn:
+                self.peak_finder(ave)
+            else:
+                return
+            self.events[event].freq = list(np.array(self.hipk_freq)[self.hipk])
+            if ave_fn:
+                try:
+                    self.events[event].ave = list(np.array(ave.val)[self.hipk])
+                except IndexError:
+                    pass
+            if maxh_fn:
+                try:
+                    self.events[event].maxhold = list(np.array(maxhold.val)[self.hipk])
+                except IndexError:
+                    pass
+            if minh_fn:
+                try:
+                    self.events[event].minhold = list(np.array(minhold.val)[self.hipk])
+                except IndexError:
+                    pass
 
     def peak_finder(self, spec, cwt_range=[1, 7], rc_range=[4, 4]):
         self.hipk_freq = spec.freq
@@ -190,24 +221,39 @@ class Rids:
 
     def peak_viewer(self):
         if self.hipk is None:
-            print("No peaks sought.")
             return
         import matplotlib.pyplot as plt
         plt.plot(self.hipk_freq, self.hipk_val)
         plt.plot(np.array(self.hipk_freq)[self.hipk], np.array(self.hipk_val)[self.hipk], 'kv')
 
     def viewer(self):
-        import matplotlib.pyplot as plt
         clr = ['k', 'b', 'g', 'r', 'm', 'c', 'y', '0.25', '0.5', '0.75']
         c = 0
         for e, v in self.events.iteritems():
-            if 'baseline' in e:
-                plt.plot(v.freq[:len(v.ave)], v.ave, 'k')
-                plt.plot(v.freq, v.maxhold, 'k')
-            else:
-                s = clr[c % len(clr)]
-                plt.plot(v.freq[:len(v.ave)], v.ave[:len(v.freq)], '_', color=s)
-                plt.plot(v.freq, v.maxhold, 'v', color=s)
+            s = clr[c % len(clr)]
+            # Plot ave if available
+            if 'baseline' in e.lower():
+                s = 'k'
+            try:
+                utils.spectrum_plotter(e, v.freq, v.ave, '_', s)
+            except AttributeError:
+                pass
+            # Plot maxhold if available
+            if 'baseline' in e.lower():
+                s = 'r'
+            try:
+                utils.spectrum_plotter(e, v.freq, v.maxhold, 'v', s)
+            except AttributeError:
+                pass
+            # Plot minhold if available
+            if 'baseline' in e.lower():
+                s = 'b'
+            try:
+                utils.spectrum_plotter(e, v.freq, v.minhold, '^', s)
+            except AttributeError:
+                pass
+
+            if 'baseline' not in e.lower():
                 c += 1
 
     def stats(self):
@@ -222,25 +268,25 @@ class Rids:
                 break
             available_files = sorted(os.listdir(directory))
             f = {'ave': {'E': [], 'N': []},
-                 'maxh': {'E': [], 'N': []}}
+                 'maxh': {'E': [], 'N': []},
+                 'minh': {'E': [], 'N': []}}
             loop = False
             for af in available_files:
                 ftype, pol = utils.peel_type_polarization(af)
-                if ftype in ['ave', 'maxh']:
+                if ftype in f:
                     loop = True
                     f[ftype][pol].append(os.path.join(directory, af))
             for pol in self.polarizations:
-                if not len(f['ave'][pol]) or not len(f['maxh'][pol]):
-                    continue
-                elif len(f['ave'][pol]) != len(f['maxh'][pol]):
+                if not len(f['ave'][pol]):
                     continue
                 time_stamp = utils.peel_time_stamp(f['ave'][pol][0])
                 self.set(time_stamp=time_stamp)
-                self.get_event('baseline_' + pol, f['ave'][pol][0], f['maxh'][pol][0], pol)
-                for a, m in zip(f['ave'][pol][:obs_per_file], f['maxh'][pol][:obs_per_file]):
+                self.get_event('baseline_' + pol, pol, f['ave'][pol][0], f['maxh'][pol][0], f['minh'][pol][0])
+                for a, m, n in zip(f['ave'][pol][:obs_per_file], f['maxh'][pol][:obs_per_file], f['minh'][pol][:obs_per_file]):
                     time_stamp = utils.peel_time_stamp(a) + pol
-                    self.get_event(time_stamp, a, m, pol)
+                    self.get_event(time_stamp, pol, a, m, n)
                     os.remove(a)
                     os.remove(m)
+                    os.remove(n)
             output_file = os.path.join(directory, str(self.time_stamp) + '.ridz')
             self.rid_writer(output_file)
