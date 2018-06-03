@@ -52,6 +52,8 @@ def peel_type_polarization(v):
 
 
 def peel_time_stamp(v):
+    if v is None:
+        return None
     z = v.split('/')[-1]
     ts = "{}-{}".format(z.split('_')[0], z.split('_')[1])
     return ts

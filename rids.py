@@ -267,22 +267,38 @@ class Rids:
             if max_loop_ctr > max_loops:
                 break
             available_files = sorted(os.listdir(directory))
-            f = {'ave': {'E': [], 'N': []},
-                 'maxh': {'E': [], 'N': []},
-                 'minh': {'E': [], 'N': []}}
+            f = {'ave': {'E': [], 'N': [], 'cnt': {'E': 0, 'N': 0}},
+                 'maxh': {'E': [], 'N': [], 'cnt': {'E': 0, 'N': 0}},
+                 'minh': {'E': [], 'N': [], 'cnt': {'E': 0, 'N': 0}}}
             loop = False
             for af in available_files:
                 ftype, pol = utils.peel_type_polarization(af)
                 if ftype in f:
                     loop = True
                     f[ftype][pol].append(os.path.join(directory, af))
+                    f[ftype]['cnt'][pol] += 1
+            max_pol_cnt = {'E': 0, 'N': 0}
             for pol in self.polarizations:
-                if not len(f['ave'][pol]):
+                for ft in ['ave', 'maxh', 'minh']:
+                    if f[ft]['cnt'][pol] > max_pol_cnt[pol]:
+                        max_pol_cnt[pol] = f[ft]['cnt'][pol]
+                for ft in ['ave', 'maxh', 'minh']:
+                    diff_len = max_pol_cnt[pol] - len(f[ft][pol])
+                    if diff_len > 0:
+                        f[ft][pol] = f[ft][pol] + [None] * diff_len
+            for pol in self.polarizations:
+                if not max_pol_cnt[pol]:
                     continue
-                time_stamp = utils.peel_time_stamp(f['ave'][pol][0])
-                self.set(time_stamp=time_stamp)
-                self.get_event('baseline_' + pol, pol, f['ave'][pol][0], f['maxh'][pol][0], f['minh'][pol][0])
-                for a, m, n in zip(f['ave'][pol][:obs_per_file], f['maxh'][pol][:obs_per_file], f['minh'][pol][:obs_per_file]):
+                axn0 = {'a': f['ave'][pol][0], 'x': f['maxh'][pol][0], 'n': f['minh'][pol][0]}
+                for h in axn0:
+                    ts = utils.peel_time_stamp(axh0[h])
+                    if ts is not None:
+                        self.set(time_stamp=ts)
+                        break
+                self.get_event('baseline_' + pol, pol, axn0['a'], axn0['x'], axn0['n'])
+                for a, m, n in zip(f['ave'][pol][:obs_per_file],
+                                   f['maxh'][pol][:obs_per_file],
+                                   f['minh'][pol][:obs_per_file]):
                     time_stamp = utils.peel_time_stamp(a) + pol
                     self.get_event(time_stamp, pol, a, m, n)
                     os.remove(a)
