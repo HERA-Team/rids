@@ -198,7 +198,7 @@ class Rids:
 
     def viewer(self):
         import matplotlib.pyplot as plt
-        clr = ['k', 'b', 'g', 'r', 'm', 'c', 'y']
+        clr = ['k', 'b', 'g', 'r', 'm', 'c', 'y', '0.25', '0.5', '0.75']
         c = 0
         for e, v in self.events.iteritems():
             if 'baseline' in e:
@@ -206,8 +206,8 @@ class Rids:
                 plt.plot(v.freq, v.maxhold, 'k')
             else:
                 s = clr[c % len(clr)]
-                plt.plot(v.freq[:len(v.ave)], v.ave[:len(v.freq)], s + '_')
-                plt.plot(v.freq, v.maxhold, s + 'v')
+                plt.plot(v.freq[:len(v.ave)], v.ave[:len(v.freq)], '_', color=s)
+                plt.plot(v.freq, v.maxhold, 'v', color=s)
                 c += 1
 
     def stats(self):
