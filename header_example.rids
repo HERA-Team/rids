@@ -1,6 +1,6 @@
 {
     "instrument": "HH200",
-    "detector":  "SNAP SNP011",
+    "receiver":  "SNAP SNP011",
     "channel_width":  "1 kHz",
     "time_constant":  "1 s",
     "threshold": "-10.0 dBm",

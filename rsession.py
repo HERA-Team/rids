@@ -17,7 +17,7 @@ args = ap.parse_args()
 
 if __name__ == '__main__':
     r = rids.Rids()
-    r.json_reader(os.path.join(args.directory, args.parameters))
+    r.rid_reader(os.path.join(args.directory, args.parameters))
     r.append_comment(args.comment)
     if args.ecal is not None:
         utils.spectrum_reader(args.ecal, r.cal['E'])

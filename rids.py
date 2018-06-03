@@ -2,6 +2,7 @@ from __future__ import print_function
 import json
 import os
 import numpy as np
+import gzip
 import rids_utils as utils
 import peaks
 
@@ -15,26 +16,50 @@ class Spectral:
 
 
 class Rids:
-    dattr = ['instrument', 'detector', 'comment', 'time_stamp', 'freq_unit', 'val_unit']
+    """
+    RF Interference Data System (RIDS)
+    Reads/writes .rids/[.ridz] files, [zipped] JSON files with fields as described below.
+    Any field may be omitted or missing.
+      This first set is header information - typically stored in a .rids file that gets read/rewritten
+        instrument:  description of the instrument used
+        receiver:  description of receiver used
+        channel_width:  RF bandwidth
+        channel_width_unit:  unit of bandwidth
+        vbw: video bandwidth (typically used for spectrum analyzer)
+        vbw_unit: unit of bandwidth
+        time_constant: averaging time/maxhold reset time
+            though not ideal, can be a descriptive word or word pair for e.g. ongoing maxhold, etc
+        time_constant_unit:  unit of time_constant
+        threshold:  value used to threshold peaks
+        threshold_unit: unit of threshold
+        freq_unit:  unit of frequency used in spectra
+        val_unit: unit of value used in spectra
+        comment:  general comment
+      These are typically set in data-taking session
+        time_stamp:  time_stamp for file/baseline data
+        cal:  calibration data by polarization/frequency
+        events:  baseline or ave/maxhold spectra
+    """
+    dattr = ['instrument', 'receiver', 'time_stamp', 'freq_unit', 'val_unit']
     uattr = ['channel_width', 'time_constant', 'threshold', 'vbw']
     spectral_fields = ['comment', 'polarization', 'freq', 'val', 'ave', 'maxhold']
     polarizations = ['E', 'N']
 
-    def __init__(self):
+    def __init__(self, comment=None):
         self.instrument = None
-        self.detector = None
+        self.receiver = None
         self.channel_width = None
         self.channel_width_unit = None
         self.vbw = None
         self.vbw_unit = None
         self.time_constant = None
         self.time_constant_unit = None
-        self.time_stamp = None
         self.threshold = None
         self.threshold_unit = None
         self.freq_unit = None
         self.val_unit = None
-        self.comment = None
+        self.comment = comment
+        self.time_stamp = None
         self.cal = {}
         for pol in self.polarizations:
             self.cal[pol] = Spectral(polarization=pol)
@@ -42,12 +67,19 @@ class Rids:
         # --Other variables--
         self.hipk = None
 
-    def json_reader(self, filename):
+    def rid_reader(self, filename):
         """
-        This will read a JSON file with a full or subset of structure entities
+        This will read a RID file with a full or subset of structure entities
         """
-        with open(filename, 'rb') as f:
+        file_type = filename.split('.')[-1].lower()
+        if file_type == 'ridz':
+            r_open = gzip.open
+        else:
+            r_open = open
+        with r_open(filename, 'rb') as f:
             data = json.load(f)
+        if 'comment' in data:
+            self.append_comment(data['comment'])
         for d in self.dattr:
             if d in data:
                 setattr(self, d, data[d])
@@ -81,11 +113,12 @@ class Rids:
         setattr(self, d, d0)
         setattr(self, d + '_unit', d1)
 
-    def json_writer(self, filename, fix_list=True):
+    def rid_writer(self, filename, fix_list=True):
         """
-        This writes a JSON file with a full RIDS structure
+        This writes a RID file with a full structure
         """
         ds = {}
+        ds['comment'] = self.comment
         for d in self.dattr:
             ds[d] = getattr(self, d)
         for d in self.uattr:
@@ -108,7 +141,12 @@ class Rids:
         jsd = json.dumps(ds, sort_keys=True, indent=4, separators=(',', ':'))
         if fix_list:
             jsd = utils.fix_json_list(jsd)
-        with open(filename, 'w') as f:
+        file_type = filename.split('.')[-1].lower()
+        if file_type == 'ridz':
+            r_open = gzip.open
+        else:
+            r_open = open
+        with r_open(filename, 'wb') as f:
             f.write(jsd)
 
     def set(self, **kwargs):
@@ -160,13 +198,20 @@ class Rids:
 
     def viewer(self):
         import matplotlib.pyplot as plt
+        clr = ['k', 'b', 'g', 'r', 'm', 'c', 'y']
+        c = 0
         for e, v in self.events.iteritems():
             if 'baseline' in e:
-                clr = plt.plot(v.freq[:len(v.ave)], v.ave)
-                plt.plot(v.freq, v.maxhold, color=clr[0].get_color())
+                plt.plot(v.freq[:len(v.ave)], v.ave, 'k')
+                plt.plot(v.freq, v.maxhold, 'k')
             else:
-                clr = plt.plot(v.freq[:len(v.ave)], v.ave[:len(v.freq)], 'v')
-                plt.plot(v.freq, v.maxhold, 'v', color=clr[0].get_color())
+                s = clr[c % len(clr)]
+                plt.plot(v.freq[:len(v.ave)], v.ave[:len(v.freq)], s + '_')
+                plt.plot(v.freq, v.maxhold, s + 'v')
+                c += 1
+
+    def stats(self):
+        print("Provide standard set of occupancy etc stats")
 
     def process_files(self, directory, obs_per_file=100, max_loops=1000):
         loop = True
@@ -197,5 +242,5 @@ class Rids:
                     self.get_event(time_stamp, a, m, pol)
                     os.remove(a)
                     os.remove(m)
-            output_file = os.path.join(directory, str(self.time_stamp) + '.json')
-            self.json_writer(output_file)
+            output_file = os.path.join(directory, str(self.time_stamp) + '.ridz')
+            self.rid_writer(output_file)
