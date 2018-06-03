@@ -290,8 +290,8 @@ class Rids:
                 if not max_pol_cnt[pol]:
                     continue
                 axn0 = {'a': f['ave'][pol][0], 'x': f['maxh'][pol][0], 'n': f['minh'][pol][0]}
-                for h in axn0:
-                    ts = utils.peel_time_stamp(axh0[h])
+                for h in axn0.values():
+                    ts = utils.peel_time_stamp(h)
                     if ts is not None:
                         self.set(time_stamp=ts)
                         break
