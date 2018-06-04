@@ -288,8 +288,11 @@ class Rids:
                         if time_stamp is not None:
                             break
                     self.get_event(time_stamp, pol, ave=a, maxhold=x, minhold=n)
-                    os.remove(a)
-                    os.remove(x)
-                    os.remove(n)
+                    if a is not None:
+                        os.remove(a)
+                    if x is not None:
+                        os.remove(x)
+                    if n is not None:
+                        os.remove(n)
             output_file = os.path.join(directory, str(self.time_stamp) + '.ridz')
             self.rid_writer(output_file)
