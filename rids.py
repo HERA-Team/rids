@@ -262,14 +262,15 @@ class Rids:
     def process_files(self, directory, obs_per_file=100, max_loops=1000):
         loop = True
         max_loop_ctr = 0
+        event_components = ['ave', 'maxh', 'minh']
         while (loop):
             max_loop_ctr += 1
             if max_loop_ctr > max_loops:
                 break
             available_files = sorted(os.listdir(directory))
-            f = {'ave': {'E': [], 'N': [], 'cnt': {'E': 0, 'N': 0}},
-                 'maxh': {'E': [], 'N': [], 'cnt': {'E': 0, 'N': 0}},
-                 'minh': {'E': [], 'N': [], 'cnt': {'E': 0, 'N': 0}}}
+            f = {}
+            for ftype in event_components:
+                f[ftype] = {'E': [], 'N': [], 'cnt': {'E': 0, 'N': 0}}
             loop = False
             for af in available_files:
                 ftype, pol = utils.peel_type_polarization(af)
@@ -279,30 +280,33 @@ class Rids:
                     f[ftype]['cnt'][pol] += 1
             max_pol_cnt = {'E': 0, 'N': 0}
             for pol in self.polarizations:
-                for ft in ['ave', 'maxh', 'minh']:
-                    if f[ft]['cnt'][pol] > max_pol_cnt[pol]:
-                        max_pol_cnt[pol] = f[ft]['cnt'][pol]
-                for ft in ['ave', 'maxh', 'minh']:
-                    diff_len = max_pol_cnt[pol] - len(f[ft][pol])
+                for ftype in event_components:
+                    if f[ftype]['cnt'][pol] > max_pol_cnt[pol]:
+                        max_pol_cnt[pol] = f[ftype]['cnt'][pol]
+                for ftype in event_components:
+                    diff_len = max_pol_cnt[pol] - len(f[ftype][pol])
                     if diff_len > 0:
-                        f[ft][pol] = f[ft][pol] + [None] * diff_len
+                        f[ftype][pol] = f[ftype][pol] + [None] * diff_len
             for pol in self.polarizations:
                 if not max_pol_cnt[pol]:
                     continue
-                axn0 = {'a': f['ave'][pol][0], 'x': f['maxh'][pol][0], 'n': f['minh'][pol][0]}
-                for h in axn0.values():
-                    ts = utils.peel_time_stamp(h)
-                    if ts is not None:
-                        self.set(time_stamp=ts)
+                axn = {'a': f['ave'][pol][0], 'x': f['maxh'][pol][0], 'n': f['minh'][pol][0]}
+                for h in axn.values():
+                    time_stamp = utils.peel_time_stamp(h)
+                    if time_stamp is not None:
                         break
-                self.get_event('baseline_' + pol, pol, axn0['a'], axn0['x'], axn0['n'])
-                for a, m, n in zip(f['ave'][pol][:obs_per_file],
+                self.set(time_stamp=time_stamp)
+                self.get_event('baseline_' + pol, pol, axn['a'], axn['x'], axn['n'])
+                for a, x, n in zip(f['ave'][pol][:obs_per_file],
                                    f['maxh'][pol][:obs_per_file],
                                    f['minh'][pol][:obs_per_file]):
-                    time_stamp = utils.peel_time_stamp(a) + pol
-                    self.get_event(time_stamp, pol, a, m, n)
+                    for axn in [a, x, n]:
+                        time_stamp = utils.peel_time_stamp(axn) + pol
+                        if time_stamp is not None:
+                            break
+                    self.get_event(time_stamp, pol, a, x, n)
                     os.remove(a)
-                    os.remove(m)
+                    os.remove(x)
                     os.remove(n)
             output_file = os.path.join(directory, str(self.time_stamp) + '.ridz')
             self.rid_writer(output_file)
