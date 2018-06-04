@@ -33,12 +33,13 @@ def spectrum_plotter(e, x, y, fmt, clr):
 
 
 def peel_type_polarization(v):
-    ftypes = {'ave': 'ave', 'maxh': 'maxhold', 'minh': 'minhold', 'baseline': 'baseline'}
+    ftypes = {'ave': 'ave', 'maxh': 'maxhold', 'minh': 'minhold'}
     ftype = None
     pol = None
     for t in ftypes:
         if t in v.lower():
             ftype = ftypes[t]
+            break
     if '_E' in v:
         pol = 'E'
     elif '_N' in v:

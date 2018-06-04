@@ -1,6 +1,7 @@
 from __future__ import print_function
 import json
 import os
+import copy
 import numpy as np
 import gzip
 import rids_utils as utils
@@ -212,20 +213,31 @@ class Rids:
         plt.plot(self.hipk_freq, self.hipk_val)
         plt.plot(np.array(self.hipk_freq)[self.hipk], np.array(self.hipk_val)[self.hipk], 'kv')
 
-    def viewer(self):
-        fmt = ['v', '^', '_', 'o', '.', '_', 'v', '^']
-        fmt = fmt[:len(self.event_components)]
-        clr = ['r', 'b', 'k', 'g', 'm', 'c', 'y', '0.25', '0.5', '0.75']
+    def viewer(self, show_components='all', show_baseline=True):
+        """
+        Parameters:
+        ------------
+        show_components:  event_components to show (list) or 'all'
+        show_baseline:  include baseline spectra (Boolean)
+        """
+        if isinstance(show_components, (str, unicode)):
+            show_components = self.event_components
+        sfmt = {'maxhold': 'v', 'minhold': '^', 'ave': '_'}
+        sclr = {'maxhold': 'r', 'minhold': 'b', 'ave': 'k'}
+        clrs = ['r', 'b', 'k', 'g', 'm', 'c', 'y', '0.25', '0.5', '0.75']
         c = 0
         for e, v in self.events.iteritems():
-            sclr = [clr[c % len(clr)]] * len(self.event_components)
-            if 'baseline' in e.lower():
-                sclr = clr[:len(self.event_components)]
+            is_baseline = 'baseline' in e.lower()
+            if is_baseline and not show_baseline:
+                continue
+            if is_baseline:
+                show_color = [sclr[x] for x in show_components]
             else:
+                show_color = [clrs[c % len(clrs)]] * len(self.event_components)
                 c += 1
-            for sp, f, s in zip(self.event_components, fmt, sclr):
+            for sp, s in zip(show_components, show_color):
                 try:
-                    utils.spectrum_plotter(e, v.freq, getattr(v, sp), f, s)
+                    utils.spectrum_plotter(e, v.freq, getattr(v, sp), sfmt[sp], s)
                 except AttributeError:
                     pass
 
