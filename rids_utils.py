@@ -4,8 +4,6 @@ from __future__ import print_function
 def spectrum_reader(filename, spec, polarization=None):
     """
     This reads in an ascii spectrum file.
-    If two columns stores as freq, val
-    If three columns stores as freq, ave, maxhold
     """
     if filename is None:
         return
@@ -15,11 +13,7 @@ def spectrum_reader(filename, spec, polarization=None):
         for line in f:
             data = [float(x) for x in line.split()]
             spec.freq.append(data[0])
-            if len(data) == 2:
-                spec.val.append(data[1])
-            else:
-                spec.ave.append(data[1])
-                spec.maxhold.append(data[2])
+            spec.val.append(data[1])
 
 
 def spectrum_plotter(e, x, y, fmt, clr):
@@ -39,11 +33,12 @@ def spectrum_plotter(e, x, y, fmt, clr):
 
 
 def peel_type_polarization(v):
+    ftypes = {'ave': 'ave', 'maxh': 'maxhold', 'minh': 'minhold', 'baseline': 'baseline'}
     ftype = None
     pol = None
-    for t in ['ave', 'maxh', 'minh', 'baseline']:
+    for t in ftypes:
         if t in v.lower():
-            ftype = t
+            ftype = ftypes[t]
     if '_E' in v:
         pol = 'E'
     elif '_N' in v:

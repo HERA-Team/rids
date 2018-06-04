@@ -45,6 +45,7 @@ class Rids:
     uattr = ['channel_width', 'time_constant', 'threshold', 'vbw']
     spectral_fields = ['comment', 'polarization', 'freq', 'val', 'ave', 'maxhold', 'minhold']
     polarizations = ['E', 'N']
+    event_components = ['maxhold', 'minhold', 'ave']
 
     def __init__(self, comment=None):
         self.instrument = None
@@ -165,54 +166,39 @@ class Rids:
         else:
             self.comment += ('\n' + comment)
 
-    def get_event(self, event, polarization, ave_fn=None, maxh_fn=None, minh_fn=None):
-        if ave_fn is not None:
-            ave = Spectral()
-            utils.spectrum_reader(ave_fn, ave, polarization)
-        if maxh_fn is not None:
-            maxhold = Spectral()
-            utils.spectrum_reader(maxh_fn, maxhold, polarization)
-        if minh_fn is not None:
-            minhold = Spectral()
-            utils.spectrum_reader(minh_fn, minhold, polarization)
+    def get_event(self, event, polarization, **fnargs):
+        """
+        **fnargs are filenames for self.event_components
+        """
         self.events[event] = Spectral(polarization=polarization)
+        self.events[event].freq = []
+        spectra = {}
+        for ftype, fn in fnargs.iteritems():
+            if ftype not in self.event_components:
+                continue
+            spectra[ftype] = Spectral()
+            utils.spectrum_reader(fn, spectra[ftype], polarization)
+            if 'baseline' in event.lower():
+                if len(spectra[ftype].freq) > len(self.events[event].freq):
+                    self.events[event].freq = spectra[ftype].freq
+                setattr(self.events[event], ftype, spectra[ftype].val)
         if 'baseline' in event.lower():
-            if ave_fn:
-                self.events[event].freq = ave.freq
-                self.events[event].ave = ave.val
-            if minh_fn:
-                if len(minhold.freq) > len(self.events[event].freq):
-                    self.events[event].freq = minhold.freq
-                self.events[event].minhold = minhold.val
-            if maxh_fn:
-                if len(maxhold.freq) > len(self.events[event].freq):
-                    self.events[event].freq = maxhold.freq
-                self.events[event].maxhold = maxhold.val
+            return
+
+        if 'maxhold' in fnargs.keys():
+            self.peak_finder(spectra['maxhold'])
+        elif 'minhold' in fnargs.keys():
+            self.peak_finder(spectra['minhold'])
+        elif 'ave' in fnargs.keys():
+            self.peak_finder(spectral['ave'])
         else:
-            if maxh_fn:
-                self.peak_finder(maxhold)
-            elif minh_fn:
-                self.peak_finder(minhold)
-            elif ave_fn:
-                self.peak_finder(ave)
-            else:
-                return
-            self.events[event].freq = list(np.array(self.hipk_freq)[self.hipk])
-            if ave_fn:
-                try:
-                    self.events[event].ave = list(np.array(ave.val)[self.hipk])
-                except IndexError:
-                    pass
-            if maxh_fn:
-                try:
-                    self.events[event].maxhold = list(np.array(maxhold.val)[self.hipk])
-                except IndexError:
-                    pass
-            if minh_fn:
-                try:
-                    self.events[event].minhold = list(np.array(minhold.val)[self.hipk])
-                except IndexError:
-                    pass
+            return
+        self.events[event].freq = list(np.array(self.hipk_freq)[self.hipk])
+        for ftype in fnargs:
+            try:
+                setattr(self.events[event], ftype, list(np.array(spectra[ftype].val)[self.hipk]))
+            except IndexError:
+                pass
 
     def peak_finder(self, spec, cwt_range=[1, 7], rc_range=[4, 4]):
         self.hipk_freq = spec.freq
@@ -227,34 +213,24 @@ class Rids:
         plt.plot(np.array(self.hipk_freq)[self.hipk], np.array(self.hipk_val)[self.hipk], 'kv')
 
     def viewer(self):
-        clr = ['k', 'b', 'g', 'r', 'm', 'c', 'y', '0.25', '0.5', '0.75']
+        fmt = ['v', '^', '_', 'o', '.', '_', 'v', '^']
+        fmt = fmt[:len(self.event_components)]
+        clr = ['r', 'b', 'k', 'g', 'm', 'c', 'y', '0.25', '0.5', '0.75']
         c = 0
         for e, v in self.events.iteritems():
-            s = clr[c % len(clr)]
-            # Plot ave if available
+            sclr = [clr[c % len(clr)]] * len(self.event_components)
             if 'baseline' in e.lower():
-                s = 'k'
-            try:
-                utils.spectrum_plotter(e, v.freq, v.ave, '_', s)
-            except AttributeError:
-                pass
-            # Plot maxhold if available
-            if 'baseline' in e.lower():
-                s = 'r'
-            try:
-                utils.spectrum_plotter(e, v.freq, v.maxhold, 'v', s)
-            except AttributeError:
-                pass
-            # Plot minhold if available
-            if 'baseline' in e.lower():
-                s = 'b'
-            try:
-                utils.spectrum_plotter(e, v.freq, v.minhold, '^', s)
-            except AttributeError:
-                pass
-
-            if 'baseline' not in e.lower():
+                sclr = clr[:len(self.event_components)]
+            else:
                 c += 1
+            for sp, f, s in zip(self.event_components, fmt, sclr):
+                try:
+                    utils.spectrum_plotter(e, v.freq, getattr(v, sp), f, s)
+                except AttributeError:
+                    pass
+
+    def info(self):
+        print("RIDS Information")
 
     def stats(self):
         print("Provide standard set of occupancy etc stats")
@@ -262,14 +238,13 @@ class Rids:
     def process_files(self, directory, obs_per_file=100, max_loops=1000):
         loop = True
         max_loop_ctr = 0
-        event_components = ['ave', 'maxh', 'minh']
         while (loop):
             max_loop_ctr += 1
             if max_loop_ctr > max_loops:
                 break
             available_files = sorted(os.listdir(directory))
             f = {}
-            for ftype in event_components:
+            for ftype in self.event_components:
                 f[ftype] = {'E': [], 'N': [], 'cnt': {'E': 0, 'N': 0}}
             loop = False
             for af in available_files:
@@ -280,31 +255,32 @@ class Rids:
                     f[ftype]['cnt'][pol] += 1
             max_pol_cnt = {'E': 0, 'N': 0}
             for pol in self.polarizations:
-                for ftype in event_components:
+                for ftype in self.event_components:
                     if f[ftype]['cnt'][pol] > max_pol_cnt[pol]:
                         max_pol_cnt[pol] = f[ftype]['cnt'][pol]
-                for ftype in event_components:
+                for ftype in self.event_components:
                     diff_len = max_pol_cnt[pol] - len(f[ftype][pol])
                     if diff_len > 0:
                         f[ftype][pol] = f[ftype][pol] + [None] * diff_len
+            # This part now "specializes" to the event_components
             for pol in self.polarizations:
                 if not max_pol_cnt[pol]:
                     continue
-                axn = {'a': f['ave'][pol][0], 'x': f['maxh'][pol][0], 'n': f['minh'][pol][0]}
+                axn = {'a': f['ave'][pol][0], 'x': f['maxhold'][pol][0], 'n': f['minhold'][pol][0]}
                 for h in axn.values():
                     time_stamp = utils.peel_time_stamp(h)
                     if time_stamp is not None:
                         break
                 self.set(time_stamp=time_stamp)
-                self.get_event('baseline_' + pol, pol, axn['a'], axn['x'], axn['n'])
+                self.get_event('baseline_' + pol, pol, ave=axn['a'], maxhold=axn['x'], minhold=axn['n'])
                 for a, x, n in zip(f['ave'][pol][:obs_per_file],
-                                   f['maxh'][pol][:obs_per_file],
-                                   f['minh'][pol][:obs_per_file]):
+                                   f['maxhold'][pol][:obs_per_file],
+                                   f['minhold'][pol][:obs_per_file]):
                     for axn in [a, x, n]:
                         time_stamp = utils.peel_time_stamp(axn) + pol
                         if time_stamp is not None:
                             break
-                    self.get_event(time_stamp, pol, a, x, n)
+                    self.get_event(time_stamp, pol, ave=a, maxhold=x, minhold=n)
                     os.remove(a)
                     os.remove(x)
                     os.remove(n)
