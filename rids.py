@@ -231,6 +231,13 @@ class Rids:
 
     def info(self):
         print("RIDS Information")
+        for d in self.dattr:
+            print("\t{}:  {}".format(d, getattr(self, d)))
+        for d in self.uattr:
+            print("\t{}:  {} {}".format(d, getattr(self, d), getattr(self, d + '_unit')))
+        print("\t{} cal E".format(len(self.cal['E'].freq) > 0))
+        print("\t{} cal N".format(len(self.cal['N'].freq) > 0))
+        print("\t{} events".format(len(self.events)))
 
     def stats(self):
         print("Provide standard set of occupancy etc stats")
