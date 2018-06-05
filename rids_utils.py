@@ -16,9 +16,10 @@ def spectrum_reader(filename, spec, polarization=None):
             spec.val.append(data[1])
 
 
-def spectrum_plotter(e, x, y, fmt, clr):
+def spectrum_plotter(name, e, x, y, fmt, clr):
     import matplotlib.pyplot as plt
     try:
+        plt.figure(name)
         _X = x[:len(y)]
         if 'baseline' in e.lower():
             plt.plot(_X, y, clr)

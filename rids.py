@@ -36,13 +36,13 @@ class Rids:
             threshold_unit: unit of threshold
             freq_unit:  unit of frequency used in spectra
             val_unit: unit of value used in spectra
-            comment:  general comment; rid_reader appends, doesn't overwrite
+            comment:  general comment; reader appends, doesn't overwrite
       - These are typically set in data-taking session
             time_stamp:  time_stamp for file/baseline data event
             cal:  calibration data by polarization/frequency
             events:  baseline or ave/maxhold spectra
     """
-    dattr = ['instrument', 'receiver', 'time_stamp', 'comment', 'freq_unit', 'val_unit']
+    dattr = ['instrument', 'receiver', 'time_stamp', 'comment', 'freq_unit', 'val_unit', 'nsets']
     uattr = ['channel_width', 'time_constant', 'threshold', 'vbw']
     spectral_fields = ['comment', 'polarization', 'freq', 'val', 'ave', 'maxhold', 'minhold']
     polarizations = ['E', 'N']
@@ -63,17 +63,32 @@ class Rids:
         self.val_unit = None
         self.comment = comment
         self.time_stamp = None
+        self.nsets = 0
         self.cal = {}
         for pol in self.polarizations:
             self.cal[pol] = Spectral(polarization=pol)
         self.events = {}
         # --Other variables--
+        self.rid_file = None
         self.hipk = None
 
-    def rid_reader(self, filename):
+    def reset(self):
+        self.__init__(None)
+
+    def reader(self, filename, reset=True):
         """
-        This will read a RID file with a full or subset of structure entities
+        This will read a RID file with a full or subset of structure entities.
+
+        Parameters:
+        ------------
+        filename:  rids/z filename to read
+        reset:  If true, resets all elements.
+                If false, will overwrite headers etc but add events
+                    (i.e. things will a unique key)
         """
+        if reset:
+            self.reset()
+        self.rid_file = filename
         file_type = filename.split('.')[-1].lower()
         if file_type == 'ridz':
             r_open = gzip.open
@@ -117,7 +132,7 @@ class Rids:
         setattr(self, d, d0)
         setattr(self, d + '_unit', d1)
 
-    def rid_writer(self, filename, fix_list=True):
+    def writer(self, filename, fix_list=True):
         """
         This writes a RID file with a full structure
         """
@@ -237,7 +252,7 @@ class Rids:
                 c += 1
             for sp, s in zip(show_components, show_color):
                 try:
-                    utils.spectrum_plotter(e, v.freq, getattr(v, sp), sfmt[sp], s)
+                    utils.spectrum_plotter(self.rid_file, e, v.freq, getattr(v, sp), sfmt[sp], s)
                 except AttributeError:
                     pass
 
@@ -254,12 +269,15 @@ class Rids:
     def stats(self):
         print("Provide standard set of occupancy etc stats")
 
-    def process_files(self, directory, obs_per_file=100, max_loops=1000):
+    def apply_cal(self):
+        print("Apply the calibration, if available.")
+
+    def process_files(self, directory, sets_per_file=100, max_loops=1000):
         loop = True
-        max_loop_ctr = 0
+        loop_ctr = 0
         while (loop):
-            max_loop_ctr += 1
-            if max_loop_ctr > max_loops:
+            loop_ctr += 1
+            if loop_ctr > max_loops:
                 break
             available_files = sorted(os.listdir(directory))
             f = {}
@@ -291,10 +309,13 @@ class Rids:
                     if time_stamp is not None:
                         break
                 self.set(time_stamp=time_stamp)
+                self.events = {}
                 self.get_event('baseline_' + pol, pol, ave=axn['a'], maxhold=axn['x'], minhold=axn['n'])
-                for a, x, n in zip(f['ave'][pol][:obs_per_file],
-                                   f['maxhold'][pol][:obs_per_file],
-                                   f['minhold'][pol][:obs_per_file]):
+                self.nsets = 0
+                for a, x, n in zip(f['ave'][pol][:sets_per_file],
+                                   f['maxhold'][pol][:sets_per_file],
+                                   f['minhold'][pol][:sets_per_file]):
+                    self.nsets += 1
                     for axn in [a, x, n]:
                         time_stamp = utils.peel_time_stamp(axn) + pol
                         if time_stamp is not None:
@@ -306,5 +327,6 @@ class Rids:
                         os.remove(x)
                     if n is not None:
                         os.remove(n)
-            output_file = os.path.join(directory, str(self.time_stamp) + '.ridz')
-            self.rid_writer(output_file)
+            fn = "{}.s{}.T{}.ridz".format(self.time_stamp, self.nsets, self.threshold)
+            output_file = os.path.join(directory, fn)
+            self.writer(output_file)
