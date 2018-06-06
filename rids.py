@@ -389,18 +389,20 @@ def spectrum_reader(filename, spec, polarization=None):
             spec.val.append(data[1])
 
 
-def spectrum_plotter(name, e, x, y, fmt, clr):
+def spectrum_plotter(figure_name, event_name, x, y, fmt, clr):
     import matplotlib.pyplot as plt
+    if not len(x) or not len(y):
+        return
     try:
-        plt.figure(name)
+        plt.figure(figure_name)
         _X = x[:len(y)]
-        if 'baseline' in e.lower():
+        if 'baseline' in event_name.lower():
             plt.plot(_X, y, clr)
         else:
             plt.plot(_X, y, fmt, color=clr)
     except ValueError:
         _Y = y[:len(x)]
-        if 'baseline' in e.lower():
+        if 'baseline' in event_name.lower():
             plt.plot(x, _Y, clr)
         else:
             plt.plot(x, _Y, fmt, color=clr)
