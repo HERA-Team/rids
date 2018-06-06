@@ -21,6 +21,7 @@ class Rids:
     Reads/writes .rids/[.ridz] files, [zipped] JSON files with fields as described below.
     Any field may be omitted or missing.
       - This first set is header information - typically stored in a .rids file that gets read/rewritten
+            ident: description of filename
             instrument:  description of the instrument used
             receiver:  description of receiver used
             channel_width:  RF bandwidth
@@ -275,13 +276,13 @@ class Rids:
     def apply_cal(self):
         print("Apply the calibration, if available.")
 
-    def process_files(self, directory, events_per_file=100, max_loops=1000):
+    def process_files(self, directory, ident='all', events_per_file=100, max_loops=1000):
         """
         This is the standard method to process spectrum files in a directory to
         produce ridz files.
 
         Format of the spectrum filename (peel_filename below):
-        <path>/identifier:time_stamp.event_component.polarization
+        <path>/identifier_time-stamp.event_component.polarization
 
         Parameters:
         ------------
@@ -292,6 +293,7 @@ class Rids:
         """
         loop = True
         loop_ctr = 0
+        self.ident = ident
         while (loop):
             loop_ctr += 1
             if loop_ctr > max_loops:
@@ -307,12 +309,14 @@ class Rids:
             loop = False
             for af in available_files:
                 fnd = peel_filename(af, self.event_components)
-                if not len(fnd):
+                if not len(fnd) or fnd['polarization'] not in self.polarizations:
                     continue
-                if fnd['event_component'] in f and fnd['polarization'] in self.polarizations:
+                if fnd['event_component'] in f and (if ident == 'all' or if ident == fnd['ident']):
                     loop = True
                     f[fnd['event_component']][fnd['polarization']].append(os.path.join(directory, af))
                     f[fnd['event_component']]['cnt'][fnd['polarization']] += 1
+                    if ident == 'all' and fnd['ident'] not in self.ident:
+                        self.ident += (', ' + fnd['ident'])
             max_pol_cnt = {}
             for pol in self.polarizations:
                 max_pol_cnt[pol] = 0
@@ -351,7 +355,10 @@ class Rids:
                         os.remove(x)
                     if n is not None:
                         os.remove(n)
-            fn = "{}{}.s{}.T{}.ridz".format(self.ident, self.time_stamp, self.nevents, self.threshold)
+            th = self.threshold
+            if abs(self.threshold) < 1.0:
+                th *= 100.0
+            fn = "{}_{}.s{}.T{:.0f}.ridz".format(self.ident, self.time_stamp, self.nevents, th)
             output_file = os.path.join(directory, fn)
             self.writer(output_file)
 
@@ -391,17 +398,18 @@ def spectrum_plotter(name, e, x, y, fmt, clr):
 def peel_filename(v, eclist=None):
     if v is None:
         return {}
-    s = v.split('/')[-1].split(':')
-    if len(s) != 2:
+    s = v.split('/')[-1].split('_')
+    if len(s) < 2:
         return {}
     ident = s[0]
-    s = s[1].split('.')
-    if len(s) != 3:
+    s = '-'.join(s[1:])
+    s = s.split('.')
+    if len(s) < 3:
         return {}
     fnd = {'ident': ident}
-    fnd['time_stamp'] = s[0]
-    fnd['event_component'] = s[1].lower()
-    fnd['polarization'] = s[2].upper()
+    fnd['time_stamp'] = '.'.join(s[:-2])
+    fnd['event_component'] = s[-2].lower()
+    fnd['polarization'] = s[-1].upper()
     if eclist is None:
         return fnd
     eclist = [x.lower() for x in eclist]
