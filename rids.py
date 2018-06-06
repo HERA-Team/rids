@@ -39,11 +39,13 @@ class Rids:
             val_unit: unit of value used in spectra
             comment:  general comment; reader appends, doesn't overwrite
       - These are typically set in data-taking session
-            time_stamp:  time_stamp for file/baseline data event
+            time_stamp_first:  time_stamp for first file/baseline data event
+            time_stamp_last:           "      last          "
             cal:  calibration data by polarization
             events:  baseline or ave/maxhold spectra
     """
-    dattr = ['ident', 'instrument', 'receiver', 'time_stamp', 'comment', 'freq_unit', 'val_unit', 'nevents']
+    dattr = ['ident', 'instrument', 'receiver', 'time_stamp_first', 'time_stamp_last',
+             'comment', 'freq_unit', 'val_unit', 'nevents']
     uattr = ['channel_width', 'time_constant', 'threshold', 'vbw']
     spectral_fields = ['comment', 'polarization', 'freq', 'val', 'ave', 'maxhold', 'minhold']
     polarizations = ['E', 'N']
@@ -64,7 +66,8 @@ class Rids:
         self.freq_unit = None
         self.val_unit = None
         self.comment = comment
-        self.time_stamp = None
+        self.time_stamp_first = None
+        self.time_stamp_last = None
         self.nevents = 0
         self.cal = {}
         for pol in self.polarizations:
@@ -193,7 +196,7 @@ class Rids:
         self.events[event_name].freq = []
         spectra = {}
         for ec, fn in fnargs.iteritems():
-            if ec not in self.event_components:
+            if ec not in self.event_components or fn is None:
                 continue
             spectra[ec] = Spectral()
             spectrum_reader(fn, spectra[ec], polarization)
@@ -205,18 +208,20 @@ class Rids:
         if 'baseline' in event.lower():
             return
 
-        if 'maxhold' in fnargs.keys():
+        if 'maxhold' in fnargs.keys() and fnargs['maxhold'] is not None:
             self.peak_finder(spectra['maxhold'])
-        elif 'minhold' in fnargs.keys():
+        elif 'minhold' in fnargs.keys() and fnargs['minhold'] is not None:
             self.peak_finder(spectra['minhold'])
-        elif 'ave' in fnargs.keys():
-            self.peak_finder(spectral['ave'])
+        elif 'ave' in fnargs.keys() and fnargs['ave'] is not None:
+            self.peak_finder(spectra['ave'])
         else:
             return
         self.events[event_name].freq = list(np.array(self.hipk_freq)[self.hipk])
-        for ftype in fnargs:
+        for ec, fn in fnargs.iteritems():
+            if fn is None:
+                continue
             try:
-                setattr(self.events[event_name], ftype, list(np.array(spectra[ftype].val)[self.hipk]))
+                setattr(self.events[event_name], ec, list(np.array(spectra[ec].val)[self.hipk]))
             except IndexError:
                 pass
 
@@ -307,16 +312,23 @@ class Rids:
                     f[ec][pol] = []
                     f[ec]['cnt'][pol] = 0
             loop = False
+            file_times = []
             for af in available_files:
                 fnd = peel_filename(af, self.event_components)
                 if not len(fnd) or fnd['polarization'] not in self.polarizations:
                     continue
-                if fnd['event_component'] in f and (if ident == 'all' or if ident == fnd['ident']):
+                if fnd['event_component'] in f and (ident == 'all' or ident == fnd['ident']):
                     loop = True
                     f[fnd['event_component']][fnd['polarization']].append(os.path.join(directory, af))
                     f[fnd['event_component']]['cnt'][fnd['polarization']] += 1
-                    if ident == 'all' and fnd['ident'] not in self.ident:
-                        self.ident += (', ' + fnd['ident'])
+                    file_times.append(fnd['time_stamp'])
+                    if ident == 'all':
+                        self.ident = fnd['ident']
+            if not len(file_times):
+                break
+            file_times = sorted(file_times)
+            self.time_stamp_first = file_times[0]
+            self.time_stamp_last = file_times[-1]
             max_pol_cnt = {}
             for pol in self.polarizations:
                 max_pol_cnt[pol] = 0
@@ -329,6 +341,8 @@ class Rids:
                     if diff_len > 0:
                         f[ec][pol] = f[ec][pol] + [None] * diff_len
             # This part now "specializes" to the event_components
+            self.events = {}
+            self.nevents = 0
             for pol in self.polarizations:
                 if not max_pol_cnt[pol]:
                     continue
@@ -337,9 +351,6 @@ class Rids:
                     fnd = peel_filename(a0)
                     if len(fnd):
                         break
-                self.set(time_stamp=fnd['time_stamp'], ident=fnd['ident'])
-                self.events = {}
-                self.nevents = 0
                 self.get_event('baseline_', pol, ave=axn['a'], maxhold=axn['x'], minhold=axn['n'])
                 for a, x, n in zip(f['ave'][pol][:events_per_file],
                                    f['maxhold'][pol][:events_per_file],
@@ -358,7 +369,7 @@ class Rids:
             th = self.threshold
             if abs(self.threshold) < 1.0:
                 th *= 100.0
-            fn = "{}_{}.s{}.T{:.0f}.ridz".format(self.ident, self.time_stamp, self.nevents, th)
+            fn = "{}_{}.e{}.T{:.0f}.ridz".format(self.ident, self.time_stamp_first, self.nevents, th)
             output_file = os.path.join(directory, fn)
             self.writer(output_file)
 
