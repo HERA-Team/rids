@@ -147,15 +147,20 @@ class Rids:
             ds[d] = getattr(self, d)
         for d in self.uattr:
             ds[d] = "{} {}".format(getattr(self, d), getattr(self, d + '_unit'))
-        ds['cal'] = {'E': {}, 'N': {}}
+        caltmp = {}
         for pol in self.polarizations:
             for v in self.spectral_fields:
                 try:
-                    ds['cal'][pol][v] = getattr(self.cal[pol], v)
+                    X = getattr(self.cal[pol], v)
+                    if pol not in caltmp:
+                        caltmp[pol] = {}
+                    caltmp[pol][v] = X
                 except AttributeError:
                     continue
                 except KeyError:
                     continue
+        if len(caltmp):
+            ds['cal'] = caltmp
         ds['events'] = {}
         for d in self.events:
             ds['events'][d] = {}
@@ -211,10 +216,12 @@ class Rids:
         if 'baseline' in event.lower():
             return
 
-        for ec, fn in fnargs.iteritems():
-            if ec not in self.event_components or fn is None:
-                continue
-            self.peak_finder(spectra[ec])
+        for event_component in self.event_components:
+            for ec, fn in fnargs.iteritems():
+                if ec != event_component or fn is None:
+                    continue
+                self.peak_finder(spectra[ec])
+                break
             break
         else:
             return
@@ -251,19 +258,24 @@ class Rids:
         sfmt = {'maxhold': 'v', 'minhold': '^', 'ave': '_'}
         sclr = {'maxhold': 'r', 'minhold': 'b', 'ave': 'k'}
         clrs = ['r', 'b', 'k', 'g', 'm', 'c', 'y', '0.25', '0.5', '0.75']
+        lss = ['-', '--', ':']
         c = 0
+        bl = 0
         for e, v in self.events.iteritems():
             is_baseline = 'baseline' in e.lower()
             if is_baseline and not show_baseline:
                 continue
             if is_baseline:
                 show_color = [sclr[x] for x in show_components]
+                show_linestyle = [lss[bl % len(lss)]] * len(self.event_components)
+                bl += 1
             else:
+                show_linestyle = [None] * len(self.event_components)
                 show_color = [clrs[c % len(clrs)]] * len(self.event_components)
                 c += 1
-            for sp, s in zip(show_components, show_color):
+            for sp, s, ls in zip(show_components, show_color, show_linestyle):
                 try:
-                    spectrum_plotter(self.rid_file, e, v.freq, getattr(v, sp), sfmt[sp], s)
+                    spectrum_plotter(self.rid_file, e, v.freq, getattr(v, sp), sfmt[sp], s, ls)
                 except AttributeError:
                     pass
 
@@ -273,8 +285,9 @@ class Rids:
             print("\t{}:  {}".format(d, getattr(self, d)))
         for d in self.uattr:
             print("\t{}:  {} {}".format(d, getattr(self, d), getattr(self, d + '_unit')))
-        print("\tcal E {}".format(len(self.cal['E'].freq) > 0))
-        print("\tcal N {}".format(len(self.cal['N'].freq) > 0))
+        for p in self.polarizations:
+            if p in self.cal:
+                print("\tcal {} {}".format(pol, len(self.cal['E'].freq) > 0))
         print("\t{} events".format(len(self.events)))
 
     def stats(self):
@@ -380,7 +393,7 @@ class Rids:
             th = self.threshold
             if abs(self.threshold) < 1.0:
                 th *= 100.0
-            fn = "{}_{}.e{}.T{:.0f}.ridz".format(self.ident, self.time_stamp_first, self.nevents, th)
+            fn = "{}.{}.e{}.T{:.0f}.ridz".format(self.ident, self.time_stamp_first, self.nevents, th)
             output_file = os.path.join(directory, fn)
             self.writer(output_file)
 
@@ -400,7 +413,7 @@ def spectrum_reader(filename, spec, polarization=None):
             spec.val.append(data[1])
 
 
-def spectrum_plotter(figure_name, event_name, x, y, fmt, clr):
+def spectrum_plotter(figure_name, event_name, x, y, fmt, clr, ls):
     import matplotlib.pyplot as plt
     if not len(x) or not len(y):
         return
@@ -408,13 +421,13 @@ def spectrum_plotter(figure_name, event_name, x, y, fmt, clr):
         plt.figure(figure_name)
         _X = x[:len(y)]
         if 'baseline' in event_name.lower():
-            plt.plot(_X, y, clr)
+            plt.plot(_X, y, clr, linestyle=ls)
         else:
             plt.plot(_X, y, fmt, color=clr)
     except ValueError:
         _Y = y[:len(x)]
         if 'baseline' in event_name.lower():
-            plt.plot(x, _Y, clr)
+            plt.plot(x, _Y, clr, linestyle=ls)
         else:
             plt.plot(x, _Y, fmt, color=clr)
 
