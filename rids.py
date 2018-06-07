@@ -48,7 +48,7 @@ class Rids:
              'comment', 'freq_unit', 'val_unit', 'nevents']
     uattr = ['channel_width', 'time_constant', 'threshold', 'vbw']
     spectral_fields = ['comment', 'polarization', 'freq', 'val', 'ave', 'maxhold', 'minhold']
-    polarizations = ['E', 'N']
+    polarizations = ['E', 'N', 'I']
     event_components = ['maxhold', 'minhold', 'ave']
 
     def __init__(self, comment=None):
@@ -70,8 +70,6 @@ class Rids:
         self.time_stamp_last = None
         self.nevents = 0
         self.cal = {}
-        for pol in self.polarizations:
-            self.cal[pol] = Spectral(polarization=pol)
         self.events = {}
         # --Other variables--
         self.rid_file = None
@@ -101,38 +99,41 @@ class Rids:
             r_open = open
         with r_open(filename, 'rb') as f:
             data = json.load(f)
-        for d in self.dattr:
-            if d in data:
-                if d == 'comment':
-                    self.append_comment(data[d])
-                else:
-                    setattr(self, d, data[d])
-        for d in self.uattr:
-            if d in data:
-                self._set_uattr(d, data[d])
-        if 'cal' in data:
-            for pol in self.polarizations:
-                if pol in data['cal']:
-                    for v in self.spectral_fields:
-                        if v in data['cal'][pol]:
-                            setattr(self.cal[pol], v, data['cal'][pol][v])
-        if 'events' in data:
-            for d in data['events']:
-                self.events[d] = Spectral()
-                for v in self.spectral_fields:
-                    if v in data['events'][d]:
-                        setattr(self.events[d], v, data['events'][d][v])
+        for d, X in data.iteritems():
+            if d == 'comment':
+                self.append_comment(X)
+            elif d in self.dattr:
+                setattr(self, d, X)
+            elif d in self.uattr:
+                self._set_uattr(d, X)
+            elif d == 'cal':
+                for pol in X:
+                    if pol not in self.polarizations:
+                        print("Unexpected pol {} in {}".format(pol, d))
+                        continue
+                    self.cal[pol] = Spectral(pol)
+                    for v, Y in X[pol].iteritems():
+                        if v not in self.spectral_fields:
+                            print("Unexpected field {} in {}".format(v, d))
+                            continue
+                        setattr(self.cal[pol], v, Y)
+            elif d == 'events':
+                for e in X:
+                    self.events[e] = Spectral()
+                    for v, Y in X[e].iteritems():
+                        if v not in self.spectral_fields:
+                            print("Unexpected field {} in {}".format(v, d))
+                            continue
+                        setattr(self.events[e], v, Y)
 
     def _set_uattr(self, d, x):
         v = x.split()
-        if len(v) == 1:
+        try:
+            d0 = float(v[0])
+        except ValueError:
             d0 = v[0]
-            d1 = None
-        elif len(v) > 1:
-            try:
-                d0 = float(v[0])
-            except ValueError:
-                d0 = v[0]
+        d1 = None
+        if len(v) > 1:
             d1 = v[1]
         setattr(self, d, d0)
         setattr(self, d + '_unit', d1)
@@ -189,7 +190,7 @@ class Rids:
 
     def get_event(self, event, polarization, **fnargs):
         """
-        **fnargs are filenames for self.event_components
+        **fnargs are filenames for self.event_components {"event_component": <filename>}
         """
         event_name = event + polarization
         self.events[event_name] = Spectral(polarization=polarization)
@@ -208,12 +209,11 @@ class Rids:
         if 'baseline' in event.lower():
             return
 
-        if 'maxhold' in fnargs.keys() and fnargs['maxhold'] is not None:
-            self.peak_finder(spectra['maxhold'])
-        elif 'minhold' in fnargs.keys() and fnargs['minhold'] is not None:
-            self.peak_finder(spectra['minhold'])
-        elif 'ave' in fnargs.keys() and fnargs['ave'] is not None:
-            self.peak_finder(spectra['ave'])
+        for ec, fn in fnargs.iteritems():
+            if ec not in self.event_components or fn is None:
+                continue
+            self.peak_finder(spectra(ec))
+            break
         else:
             return
         self.events[event_name].freq = list(np.array(self.hipk_freq)[self.hipk])
@@ -281,91 +281,100 @@ class Rids:
     def apply_cal(self):
         print("Apply the calibration, if available.")
 
-    def process_files(self, directory, ident='all', events_per_file=100, max_loops=1000):
+    def process_files(self, directory='.', ident='all', baseline=[0, -1], events_per_pol=100, max_loops=1000):
         """
         This is the standard method to process spectrum files in a directory to
         produce ridz files.
 
         Format of the spectrum filename (peel_filename below):
-        <path>/identifier_time-stamp.event_component.polarization
+        <path>/identifier.time-stamp.event_component.polarization
 
         Parameters:
         ------------
-        directory:  directory in which the files reside and where the ridz files
-                    get written
-        events_per_file:  number of events (see event_components) per ridz file
+        directory:  directory where files reside and ridz files get written
+        idents:  idents to do.  If 'all' processes all, picking first for overall ident
+        baseline:  indices of events to be saved as baseline spectra
+        events_per_pol:  number of events (see event_components) per pol per ridz file
         max_loops:  will stop after this number
         """
         loop = True
         loop_ctr = 0
-        self.ident = ident
+        self.ident = None
         while (loop):
             loop_ctr += 1
             if loop_ctr > max_loops:
                 break
-            available_files = sorted(os.listdir(directory))
+            # Set up the event_component file dictionary
             f = {}
-            for ec in self.event_components:
-                f[ec] = {}
-                f[ec]['cnt'] = {}
-                for pol in self.polarizations:
-                    f[ec][pol] = []
-                    f[ec]['cnt'][pol] = 0
+            max_pol_cnt = {}
+            for pol in self.polarizations:
+                f[pol] = {}
+                max_pol_cnt[pol] = 0
+                for ec in self.event_components:
+                    f[pol][ec] = []
+            # Go through and sort the available files into file dictionary
             loop = False
+            available_files = sorted(os.listdir(directory))
             file_times = []
             for af in available_files:
                 fnd = peel_filename(af, self.event_components)
-                if not len(fnd) or fnd['polarization'] not in self.polarizations:
+                if not len(fnd) or\
+                        fnd['polarization'] not in self.polarizations or\
+                        fnd['event_component'] not in self.event_components:
                     continue
-                if fnd['event_component'] in f and (ident == 'all' or ident == fnd['ident']):
+                if ident == 'all' or ident == fnd['ident']:
                     loop = True
-                    f[fnd['event_component']][fnd['polarization']].append(os.path.join(directory, af))
-                    f[fnd['event_component']]['cnt'][fnd['polarization']] += 1
+                    file_list = f[fnd['polarization']][fnd['event_component']]
+                    if len(file_list) > events_per_pol:
+                        continue
                     file_times.append(fnd['time_stamp'])
-                    if ident == 'all':
+                    file_list.append(os.path.join(directory, af))
+                    if self.ident is None:
                         self.ident = fnd['ident']
-            if not len(file_times):
+            if not loop:
                 break
+            # Go through and count the sorted available files
+            num_to_read = {}
+            for pol in f:
+                for ec in f[pol]:
+                    if len(f[pol][ec]) > max_pol_cnt[pol]:
+                        max_pol_cnt[pol] = len(f[pol][ec])
+                for ec in f[pol]:
+                    diff_len = max_pol_cnt[pol] - len(f[pol][ec])
+                    if diff_len > 0:
+                        f[pol][ec] = f[pol][ec] + [None] * diff_len
+                    num_to_read[pol] = len(f[pol][ec])  # Yes, does get reset
             file_times = sorted(file_times)
             self.time_stamp_first = file_times[0]
             self.time_stamp_last = file_times[-1]
-            max_pol_cnt = {}
-            for pol in self.polarizations:
-                max_pol_cnt[pol] = 0
-            for pol in self.polarizations:
-                for ec in self.event_components:
-                    if f[ec]['cnt'][pol] > max_pol_cnt[pol]:
-                        max_pol_cnt[pol] = f[ec]['cnt'][pol]
-                for ec in self.event_components:
-                    diff_len = max_pol_cnt[pol] - len(f[ec][pol])
-                    if diff_len > 0:
-                        f[ec][pol] = f[ec][pol] + [None] * diff_len
-            # This part now "specializes" to the event_components
+            # Process the files
             self.events = {}
             self.nevents = 0
             for pol in self.polarizations:
                 if not max_pol_cnt[pol]:
                     continue
-                axn = {'a': f['ave'][pol][0], 'x': f['maxhold'][pol][0], 'n': f['minhold'][pol][0]}
-                for a0 in axn.values():
-                    fnd = peel_filename(a0)
-                    if len(fnd):
-                        break
-                self.get_event('baseline_', pol, ave=axn['a'], maxhold=axn['x'], minhold=axn['n'])
-                for a, x, n in zip(f['ave'][pol][:events_per_file],
-                                   f['maxhold'][pol][:events_per_file],
-                                   f['minhold'][pol][:events_per_file]):
-                    for axn in [a, x, n]:
-                        fnd = peel_filename(axn)
+                # Get the baseline(s)
+                for i in baseline:
+                    bld = {}
+                    for ec, ecfns in f[pol].iteritems():
+                        fnd = peel_filename(ecfns[i], self.event_components)
                         if len(fnd):
-                            break
-                    self.get_event(fnd['time_stamp'], pol, ave=a, maxhold=x, minhold=n)
-                    if a is not None:
-                        os.remove(a)
-                    if x is not None:
-                        os.remove(x)
-                    if n is not None:
-                        os.remove(n)
+                            bld[ec] = ecfns[i]
+                    evn = 'baseline{}.'.format(i)
+                    self.get_event(evn, pol, bld)
+                # Get the events
+                for i in range(num_to_read[pol]):
+                    ecd = {}
+                    for ec, ecfns in f[pol].iteritems():
+                        fnd = peel_filename(ecfns[i], self.event_components)
+                        if len(fnd):
+                            ecd[ec] = ecfns[i]
+                    evn = fnd['time_stamp']
+                    self.get_event(evn, pol, ecd)
+                    for x in ecd.values():
+                        if x is not None:
+                            os.remove(x)
+            # Write the ridz file
             th = self.threshold
             if abs(self.threshold) < 1.0:
                 th *= 100.0
@@ -411,16 +420,11 @@ def spectrum_plotter(figure_name, event_name, x, y, fmt, clr):
 def peel_filename(v, eclist=None):
     if v is None:
         return {}
-    s = v.split('/')[-1].split('_')
-    if len(s) < 2:
+    s = v.split('/')[-1].split('.')
+    if len(s) not in [4, 5]:  # time_stamp may have one '.' in it
         return {}
-    ident = s[0]
-    s = '-'.join(s[1:])
-    s = s.split('.')
-    if len(s) < 3:
-        return {}
-    fnd = {'ident': ident}
-    fnd['time_stamp'] = '.'.join(s[:-2])
+    fnd = {'ident': s[0]}
+    fnd['time_stamp'] = '.'.join(s[1:-2])
     fnd['event_component'] = s[-2].lower()
     fnd['polarization'] = s[-1].upper()
     if eclist is None:
