@@ -154,6 +154,8 @@ class Rids:
                     ds['cal'][pol][v] = getattr(self.cal[pol], v)
                 except AttributeError:
                     continue
+                except KeyError:
+                    continue
         ds['events'] = {}
         for d in self.events:
             ds['events'][d] = {}
@@ -212,7 +214,7 @@ class Rids:
         for ec, fn in fnargs.iteritems():
             if ec not in self.event_components or fn is None:
                 continue
-            self.peak_finder(spectra(ec))
+            self.peak_finder(spectra[ec])
             break
         else:
             return
@@ -271,8 +273,8 @@ class Rids:
             print("\t{}:  {}".format(d, getattr(self, d)))
         for d in self.uattr:
             print("\t{}:  {} {}".format(d, getattr(self, d), getattr(self, d + '_unit')))
-        print("\t{} cal E".format(len(self.cal['E'].freq) > 0))
-        print("\t{} cal N".format(len(self.cal['N'].freq) > 0))
+        print("\tcal E {}".format(len(self.cal['E'].freq) > 0))
+        print("\tcal N {}".format(len(self.cal['N'].freq) > 0))
         print("\t{} events".format(len(self.events)))
 
     def stats(self):
@@ -361,7 +363,7 @@ class Rids:
                         if len(fnd):
                             bld[ec] = ecfns[i]
                     evn = 'baseline{}.'.format(i)
-                    self.get_event(evn, pol, bld)
+                    self.get_event(evn, pol, **bld)
                 # Get the events
                 for i in range(num_to_read[pol]):
                     ecd = {}
@@ -370,7 +372,7 @@ class Rids:
                         if len(fnd):
                             ecd[ec] = ecfns[i]
                     evn = fnd['time_stamp']
-                    self.get_event(evn, pol, ecd)
+                    self.get_event(evn, pol, **ecd)
                     for x in ecd.values():
                         if x is not None:
                             os.remove(x)

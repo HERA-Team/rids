@@ -15,8 +15,11 @@ ap.add_argument('-c', '--comment', help="append a comment", default=None)
 ap.add_argument('-m', '--max_loops', help="maximum number of iteration loops", default=1000)
 ap.add_argument('-s', '--show_info', help="show the info for provided filename", default=None)
 ap.add_argument('-v', '--view', help="show plot for provided filename", default=None)
+ap.add_argument('-b', '--baselines', help="Indices for baseline in csv-list", default='0,-1')
 args = ap.parse_args()
-args.events_per_file = int(args.events_per_file)
+args.nevents = int(args.nevents)
+a = args.baselines.split(',')
+args.baselines = [int(x) for x in a]
 
 if __name__ == '__main__':
     r = rids.Rids()
@@ -36,4 +39,4 @@ if __name__ == '__main__':
             rids.spectrum_reader(args.ecal, r.cal['E'])
         if args.ncal is not None:
             rids.spectrum_reader(args.ncal, r.cal['N'])
-        r.process_files(args.directory, args.ident, args.nevents, args.max_loops)
+        r.process_files(args.directory, args.ident, args.baselines, args.nevents, args.max_loops)
