@@ -370,7 +370,7 @@ class Rids:
                 for i in baseline:
                     bld = {}
                     for ec, ecfns in f[pol].iteritems():
-                        if abs(i) > len(ecfns) or ecfns[i] is None:
+                        if abs(i) >= len(ecfns) or ecfns[i] is None:
                             continue
                         fnd = peel_filename(ecfns[i], self.event_components)
                         bld[ec] = ecfns[i]

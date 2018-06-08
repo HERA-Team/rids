@@ -1,0 +1,2 @@
+#! /bin/sh
+/Users/ddeboer/Documents/ubase/Projects/HERA/ops/rfi/rids/ridzen.py $1 $2

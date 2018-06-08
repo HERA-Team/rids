@@ -17,13 +17,13 @@ ap.add_argument('-s', '--show_info', help="show the info for provided filename",
 ap.add_argument('-v', '--view', help="show plot for provided filename", default=None)
 ap.add_argument('-b', '--baselines', help="Indices for baseline in csv-list, or +step", default='0,-1')
 args = ap.parse_args()
-args.max_loops = int(arg.max_loops)
+args.max_loops = int(args.max_loops)
 args.nevents = int(args.nevents)
-if args.baseline[0] == '+':
-    step = int(args.baseline[1:])
-    args.baseline = range(0, args.nevents, step)
-    if (args.nevents - args.baseline[-1]) >= step:
-        args.baseline.append(-1)
+if args.baselines[0] == '+':
+    step = int(args.baselines[1:])
+    args.baselines = range(0, args.nevents, step)
+    if (args.nevents - args.baselines[-1]) >= step:
+        args.baselines.append(-1)
 else:
     a = args.baselines.split(',')
     args.baselines = [int(x) for x in a]
