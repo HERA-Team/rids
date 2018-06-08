@@ -45,7 +45,7 @@ class Rids:
             events:  baseline or ave/maxhold spectra
     """
     dattr = ['ident', 'instrument', 'receiver', 'time_stamp_first', 'time_stamp_last',
-             'comment', 'freq_unit', 'val_unit', 'nevents']
+             'time_format', 'comment', 'freq_unit', 'val_unit', 'nevents']
     uattr = ['channel_width', 'time_constant', 'threshold', 'vbw']
     spectral_fields = ['comment', 'polarization', 'freq', 'val', 'maxhold', 'minhold']
     polarizations = ['E', 'N', 'I']
@@ -68,6 +68,7 @@ class Rids:
         self.comment = comment
         self.time_stamp_first = None
         self.time_stamp_last = None
+        self.time_format = None
         self.nevents = 0
         self.cal = {}
         self.events = {}
