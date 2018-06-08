@@ -370,11 +370,13 @@ class Rids:
                 for i in baseline:
                     bld = {}
                     for ec, ecfns in f[pol].iteritems():
-                        use_i = i % len(ecfns)
-                        fnd = peel_filename(ecfns[use_i], self.event_components)
-                        if len(fnd):
-                            bld[ec] = ecfns[use_i]
-                    evn = 'baseline.{}.'.format(fnd['time_stamp'])
+                        if abs(i) > len(ecfns) or ecfns[i] is None:
+                            continue
+                        fnd = peel_filename(ecfns[i], self.event_components)
+                        bld[ec] = ecfns[i]
+                    if not len(bld):
+                        break
+                    evn = 'baseline.{}.{}.'.format(i, fnd['time_stamp'])
                     self.get_event(evn, pol, **bld)
                 # Get the events
                 for i in range(num_to_read[pol]):
