@@ -217,13 +217,10 @@ class Rids:
         if 'baseline' in event.lower():
             return
 
-        for event_component in self.event_components:
-            for ec, fn in fnargs.iteritems():
-                if ec != event_component or fn is None:
-                    continue
+        for ec in self.event_components:
+            if ec in fnargs.keys() and fnargs[ec] is not None:
                 self.peak_finder(spectra[ec])
                 break
-            break
         else:
             return
         self.events[event_name].freq = list(np.array(self.hipk_freq)[self.hipk])
