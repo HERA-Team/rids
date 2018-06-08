@@ -330,6 +330,8 @@ class Rids:
             available_files = sorted(os.listdir(directory))
             file_times = []
             for af in available_files:
+                if 'rid' in af.split('.')[-1]:
+                    continue
                 fnd = peel_filename(af, self.event_components)
                 if not len(fnd) or\
                         fnd['polarization'] not in self.polarizations or\
