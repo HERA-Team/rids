@@ -47,9 +47,9 @@ class Rids:
     dattr = ['ident', 'instrument', 'receiver', 'time_stamp_first', 'time_stamp_last',
              'comment', 'freq_unit', 'val_unit', 'nevents']
     uattr = ['channel_width', 'time_constant', 'threshold', 'vbw']
-    spectral_fields = ['comment', 'polarization', 'freq', 'val', 'ave', 'maxhold', 'minhold']
+    spectral_fields = ['comment', 'polarization', 'freq', 'val', 'maxhold', 'minhold']
     polarizations = ['E', 'N', 'I']
-    event_components = ['maxhold', 'minhold', 'ave']
+    event_components = ['maxhold', 'minhold', 'val']
 
     def __init__(self, comment=None):
         self.ident = None
@@ -255,8 +255,8 @@ class Rids:
         """
         if isinstance(show_components, (str, unicode)):
             show_components = self.event_components
-        sfmt = {'maxhold': 'v', 'minhold': '^', 'ave': '_'}
-        sclr = {'maxhold': 'r', 'minhold': 'b', 'ave': 'k'}
+        sfmt = {'maxhold': 'v', 'minhold': '^', 'val': '_'}
+        sclr = {'maxhold': 'r', 'minhold': 'b', 'val': 'k'}
         clrs = ['r', 'b', 'k', 'g', 'm', 'c', 'y', '0.25', '0.5', '0.75']
         lss = ['-', '--', ':']
         c = 0

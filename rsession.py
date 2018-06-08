@@ -36,7 +36,9 @@ if __name__ == '__main__':
         r.reader(os.path.join(args.directory, args.parameters))
         r.append_comment(args.comment)
         if args.ecal is not None:
+            r.cal['E'] = Rids.Spectral('E')
             rids.spectrum_reader(args.ecal, r.cal['E'])
         if args.ncal is not None:
+            r.cal['N'] = Rids.Spectral('N')
             rids.spectrum_reader(args.ncal, r.cal['N'])
         r.process_files(args.directory, args.ident, args.baselines, args.nevents, args.max_loops)
