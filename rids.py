@@ -4,7 +4,8 @@ import os
 import copy
 import numpy as np
 import gzip
-import peaks
+import peaks  # Scipy option
+import peak_det  # Another option...
 
 
 class Spectral:
@@ -24,10 +25,12 @@ class Rids:
             ident: description of filename
             instrument:  description of the instrument used
             receiver:  description of receiver used
-            channel_width:  RF bandwidth
+            channel_width:  RF bandwidth (width in file or FFT)
             channel_width_unit:  unit of bandwidth
             vbw: video bandwidth (typically used for spectrum analyzer)
             vbw_unit: unit of bandwidth
+            rbw:  resolution bandwidth (typically used for spectrum analyzer)
+            rbw_unit:  unit of bandwidth
             nevents:  number of events included in file
             time_constant: averaging time/maxhold reset time
                            though not ideal, can be a descriptive word or word pair
@@ -47,17 +50,19 @@ class Rids:
     """
     dattr = ['ident', 'instrument', 'receiver', 'time_stamp_first', 'time_stamp_last',
              'time_format', 'comment', 'freq_unit', 'val_unit', 'nevents', 'peaked_on']
-    uattr = ['channel_width', 'time_constant', 'threshold', 'vbw']
+    uattr = ['channel_width', 'time_constant', 'threshold', 'rbw', 'vbw']
     spectral_fields = ['comment', 'polarization', 'freq', 'val', 'maxhold', 'minhold']
     polarizations = ['E', 'N', 'I']
     event_components = ['maxhold', 'minhold', 'val']
 
-    def __init__(self, comment=None):
+    def __init__(self, comment=None, **diag):
         self.ident = None
         self.instrument = None
         self.receiver = None
         self.channel_width = None
         self.channel_width_unit = None
+        self.rbw = None
+        self.rbw_unit = None
         self.vbw = None
         self.vbw_unit = None
         self.time_constant = None
@@ -77,6 +82,9 @@ class Rids:
         # --Other variables--
         self.rid_file = None
         self.hipk = None
+        for a, b in diag.iteritems():
+            setattr(self, a, b)
+        self.deltas = {'zen': 0.1, 'sa': 1.0}
 
     def reset(self):
         self.__init__(None)
@@ -231,7 +239,12 @@ class Rids:
             self.peaked_on = ec
         elif ec != self.peaked_on:
             spectra[ec].comment += 'Peaked on different component: {} rather than {}'.format(ec, self.peaked_on)
-        self.peak_finder(spectra[ec])
+        # self.peak_finder(spectra[ec], view_peaks=self.view_peaks_on_event)
+        if self.ident not in self.deltas:
+            delta = 0.1
+        else:
+            delta = self.deltas[self.ident]
+        self.peak_det(spectra[ec], delta=delta, view_peaks=self.view_peaks_on_event)
         self.events[event_name].freq = list(np.array(self.hipk_freq)[self.hipk])
         for ec, fn in fnargs.iteritems():
             if fn is None:
@@ -241,10 +254,19 @@ class Rids:
             except IndexError:
                 pass
 
-    def peak_finder(self, spec, cwt_range=[1, 7], rc_range=[4, 4]):
+    def peak_det(self, spec, delta=0.1, view_peaks=False):
+        self.hipk_freq = spec.freq
+        self.hipk_val = spec.val
+        self.hipk = peak_det.peakdet(spec.val, delta=delta, threshold=self.threshold)
+        if view_peaks:
+            self.peak_viewer()
+
+    def peak_finder(self, spec, cwt_range=[1, 3], rc_range=[4, 4], view_peaks=False):
         self.hipk_freq = spec.freq
         self.hipk_val = spec.val
         self.hipk = peaks.fp(spec.val, self.threshold, cwt_range, rc_range)
+        if view_peaks:
+            self.peak_viewer()
 
     def peak_viewer(self):
         if self.hipk is None:
@@ -252,6 +274,7 @@ class Rids:
         import matplotlib.pyplot as plt
         plt.plot(self.hipk_freq, self.hipk_val)
         plt.plot(np.array(self.hipk_freq)[self.hipk], np.array(self.hipk_val)[self.hipk], 'kv')
+        plt.show()
 
     def viewer(self, threshold=None, show_components='all', show_baseline=True):
         """
