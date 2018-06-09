@@ -43,9 +43,10 @@ class Rids:
             time_stamp_last:           "      last          "
             cal:  calibration data by polarization
             events:  baseline or ave/maxhold spectra
+            peaked_on:  event_component on which peaks were found
     """
     dattr = ['ident', 'instrument', 'receiver', 'time_stamp_first', 'time_stamp_last',
-             'time_format', 'comment', 'freq_unit', 'val_unit', 'nevents']
+             'time_format', 'comment', 'freq_unit', 'val_unit', 'nevents', 'peaked_on']
     uattr = ['channel_width', 'time_constant', 'threshold', 'vbw']
     spectral_fields = ['comment', 'polarization', 'freq', 'val', 'maxhold', 'minhold']
     polarizations = ['E', 'N', 'I']
@@ -69,6 +70,7 @@ class Rids:
         self.time_stamp_first = None
         self.time_stamp_last = None
         self.time_format = None
+        self.peaked_on = None
         self.nevents = 0
         self.cal = {}
         self.events = {}
@@ -196,7 +198,7 @@ class Rids:
         else:
             self.comment += ('\n' + comment)
 
-    def get_event(self, event, polarization, **fnargs):
+    def get_event(self, event, polarization, peak_on=None, **fnargs):
         """
         **fnargs are filenames for self.event_components {"event_component": <filename>}
         """
@@ -217,12 +219,19 @@ class Rids:
         if 'baseline' in event.lower():
             return
 
-        for ec in self.event_components:
-            if ec in fnargs.keys() and fnargs[ec] is not None:
-                self.peak_finder(spectra[ec])
-                break
+        if peak_on is not None:
+            ec = peak_on
         else:
-            return
+            for ec in self.event_components:
+                if ec in fnargs.keys() and fnargs[ec] is not None:
+                    break
+            else:
+                return
+        if self.peaked_on is None:
+            self.peaked_on = ec
+        elif ec != self.peaked_on:
+            spectra[ec].comment += 'Peaked on different component: {} rather than {}'.format(ec, self.peaked_on)
+        self.peak_finder(spectra[ec])
         self.events[event_name].freq = list(np.array(self.hipk_freq)[self.hipk])
         for ec, fn in fnargs.iteritems():
             if fn is None:
@@ -244,19 +253,24 @@ class Rids:
         plt.plot(self.hipk_freq, self.hipk_val)
         plt.plot(np.array(self.hipk_freq)[self.hipk], np.array(self.hipk_val)[self.hipk], 'kv')
 
-    def viewer(self, show_components='all', show_baseline=True):
+    def viewer(self, threshold=None, show_components='all', show_baseline=True):
         """
         Parameters:
         ------------
         show_components:  event_components to show (list) or 'all'
         show_baseline:  include baseline spectra (Boolean)
         """
+        if threshold is not None and threshold < self.threshold:
+            print("Below threshold - using {}".format(self.threshold))
+            threshold = None
+        if threshold is not None:
+            print("Threshold view not implemented yet.")
+            threshold = None
         if isinstance(show_components, (str, unicode)):
             show_components = self.event_components
-        sfmt = {'maxhold': 'v', 'minhold': '^', 'val': '_'}
-        sclr = {'maxhold': 'r', 'minhold': 'b', 'val': 'k'}
-        clrs = ['r', 'b', 'k', 'g', 'm', 'c', 'y', '0.25', '0.5', '0.75']
-        lss = ['-', '--', ':']
+        ec_list = {'maxhold': ('r', 'v'), 'minhold': ('b', '^'), 'val': ('k', '_')}
+        color_list = ['r', 'b', 'k', 'g', 'm', 'c', 'y', '0.25', '0.5', '0.75']
+        line_list = ['-', '--', ':']
         c = 0
         bl = 0
         for e, v in self.events.iteritems():
@@ -264,16 +278,19 @@ class Rids:
             if is_baseline and not show_baseline:
                 continue
             if is_baseline:
-                show_color = [sclr[x] for x in show_components]
-                show_linestyle = [lss[bl % len(lss)]] * len(self.event_components)
+                clr = [ec_list[x][0] for x in self.event_components]
+                ls = [line_list[bl % len(line_list)]] * len(self.event_components)
+                fmt = [None] * len(self.event_components)
                 bl += 1
             else:
-                show_linestyle = [None] * len(self.event_components)
-                show_color = [clrs[c % len(clrs)]] * len(self.event_components)
+                clr = [color_list[c % len(color_list)]] * len(self.event_components)
+                ls = [None] * len(self.event_components)
+                fmt = [ec_list[x][1] for x in self.event_components]
                 c += 1
-            for sp, s, ls in zip(show_components, show_color, show_linestyle):
+            for ec in show_components:
                 try:
-                    spectrum_plotter(self.rid_file, e, v.freq, getattr(v, sp), sfmt[sp], s, ls)
+                    i = self.event_components.index(ec)
+                    spectrum_plotter(self.rid_file, is_baseline, v.freq, getattr(v, ec), fmt[i], clr[i], ls[i])
                 except AttributeError:
                     pass
 
@@ -294,7 +311,7 @@ class Rids:
     def apply_cal(self):
         print("Apply the calibration, if available.")
 
-    def process_files(self, directory='.', ident='all', baseline=[0, -1], events_per_pol=100, max_loops=1000):
+    def process_files(self, directory='.', ident='all', baseline=[0, -1], peak_on=False, events_per_pol=100, max_loops=1000):
         """
         This is the standard method to process spectrum files in a directory to
         produce ridz files.
@@ -388,7 +405,7 @@ class Rids:
                         if len(fnd):
                             ecd[ec] = ecfns[i]
                     evn = fnd['time_stamp']
-                    self.get_event(evn, pol, **ecd)
+                    self.get_event(evn, pol, peak_on=peak_on, **ecd)
                     for x in ecd.values():
                         if x is not None:
                             os.remove(x)
@@ -396,7 +413,8 @@ class Rids:
             th = self.threshold
             if abs(self.threshold) < 1.0:
                 th *= 100.0
-            fn = "{}.{}.e{}.T{:.0f}.ridz".format(self.ident, self.time_stamp_first, self.nevents, th)
+            pk = self.peaked_on[:3]
+            fn = "{}.{}.e{}.{}T{:.0f}.ridz".format(self.ident, self.time_stamp_first, self.nevents, pk, th)
             output_file = os.path.join(directory, fn)
             self.writer(output_file)
 
@@ -416,20 +434,20 @@ def spectrum_reader(filename, spec, polarization=None):
             spec.val.append(data[1])
 
 
-def spectrum_plotter(figure_name, event_name, x, y, fmt, clr, ls):
+def spectrum_plotter(figure_name, is_baseline, x, y, fmt, clr, ls):
     import matplotlib.pyplot as plt
     if not len(x) or not len(y):
         return
     try:
         plt.figure(figure_name)
         _X = x[:len(y)]
-        if 'baseline' in event_name.lower():
+        if is_baseline:
             plt.plot(_X, y, clr, linestyle=ls)
         else:
             plt.plot(_X, y, fmt, color=clr)
     except ValueError:
         _Y = y[:len(x)]
-        if 'baseline' in event_name.lower():
+        if is_baseline:
             plt.plot(x, _Y, clr, linestyle=ls)
         else:
             plt.plot(x, _Y, fmt, color=clr)

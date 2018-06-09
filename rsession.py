@@ -13,9 +13,13 @@ ap.add_argument('-d', '--directory', help="directory for process files and where
 ap.add_argument('-i', '--ident', help="can be a specific ident or 'all'", default='all')
 ap.add_argument('-c', '--comment', help="append a comment", default=None)
 ap.add_argument('-m', '--max_loops', help="maximum number of iteration loops", default=1000)
+ap.add_argument('-^', '--peak_on', help="Peak on event component (if other than default)", default=None)
+ap.add_argument('-b', '--baselines', help="Indices for baseline in csv-list, or +step ('f' to stop in view)", default='0,-1')
 ap.add_argument('-s', '--show_info', help="show the info for provided filename", default=None)
 ap.add_argument('-v', '--view', help="show plot for provided filename", default=None)
-ap.add_argument('-b', '--baselines', help="Indices for baseline in csv-list, or +step", default='0,-1')
+ap.add_argument('-t', '--threshold_view', help="new threshold for viewing (if possible)", default=None)
+ap.add_argument('-@', '--show_ec', help="csv list of event components to show (if different)", default='all')
+
 args = ap.parse_args()
 args.max_loops = int(args.max_loops)
 args.nevents = int(args.nevents)
@@ -24,9 +28,17 @@ if args.baselines[0] == '+':
     args.baselines = range(0, args.nevents, step)
     if (args.nevents - args.baselines[-1]) >= step:
         args.baselines.append(-1)
+elif args.view is not None:
+    args.baselines = True
+    if args.baselines[0].lower() == 'n':
+        args.baselines = False
 else:
     a = args.baselines.split(',')
     args.baselines = [int(x) for x in a]
+if args.show_ec.lower() != 'all':
+    args.show_ec = args.show_ec.split(',')
+if args.threshold_view is not None:
+    args.threshold_view = float(args.threshold_view)
 
 if __name__ == '__main__':
     r = rids.Rids()
@@ -37,7 +49,7 @@ if __name__ == '__main__':
         import matplotlib.pyplot as plt
         r.reader(args.view)
         r.info()
-        r.viewer()
+        r.viewer(threshold=args.threshold_view, show_components=args.show_ec, show_baseline=args.baselines)
         plt.show()
     else:
         r.reader(os.path.join(args.directory, args.parameters))
@@ -48,4 +60,4 @@ if __name__ == '__main__':
         if args.ncal is not None:
             r.cal['N'] = Rids.Spectral('N')
             rids.spectrum_reader(args.ncal, r.cal['N'])
-        r.process_files(args.directory, args.ident, args.baselines, args.nevents, args.max_loops)
+        r.process_files(args.directory, args.ident, args.baselines, args.peak_on, args.nevents, args.max_loops)
