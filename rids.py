@@ -6,6 +6,7 @@ import copy
 import numpy as np
 # import peaks  # Scipy option
 import peak_det  # Another option...
+import bw_finder
 
 
 class Spectral:
@@ -22,7 +23,7 @@ class PeakSettings:
                 threshold:  value used to threshold peaks
                 threshold_unit: unit of threshold
     """
-    dattr = ['comment', 'peaked_on', 'delta', 'bw_range', 'peak_delta_values']
+    dattr = ['comment', 'peaked_on', 'delta', 'bw_range', 'delta_values']
     uattr = ['threshold']
 
     def __init__(self, comment=''):
@@ -96,6 +97,7 @@ class Rids:
         self.peak_settings = PeakSettings()
         # --Other variables--
         self.hipk = None
+        self.hipk_bw = None
         for a, b in diagnose.iteritems():
             setattr(self, a, b)
 
@@ -162,7 +164,7 @@ class Rids:
         for d in self.dattr:
             ds[d] = getattr(self, d)
         for d in self.peak_settings.dattr:
-            ds[d] = getattr(self.peak_settings.dattr, d)
+            ds[d] = getattr(self.peak_settings, d)
         for d in self.uattr:
             ds[d] = "{} {}".format(getattr(self, d), getattr(self, d + '_unit'))
         for d in self.peak_settings.uattr:
@@ -254,8 +256,9 @@ class Rids:
             delta = 0.1
         else:
             delta = self.peak_settings.delta_values[self.ident]
-        self.peak_det(spectra[ec], delta=delta, view_peaks=self.view_peaks_on_event)
+        self.peak_det(spectra[ec], delta=delta)
         self.events[event_name].freq = list(np.array(self.hipk_freq)[self.hipk])
+        self.find_bw()
         for ec, fn in fnargs.iteritems():
             if fn is None:
                 continue
@@ -264,19 +267,20 @@ class Rids:
             except IndexError:
                 pass
 
-    def peak_det(self, spec, delta=0.1, view_peaks=False):
+    def peak_det(self, spec, delta=0.1):
         self.hipk_freq = spec.freq
         self.hipk_val = spec.val
         self.hipk = peak_det.peakdet(spec.val, delta=delta, threshold=self.peak_settings.threshold)
-        if view_peaks:
+
+    def find_bw(self):
+        self.hipk_bw = bw_finder.bw_finder(self.hipk_freq, self.hipk_val, self.hipk, self.bw_range)
+        if self.view_peaks_on_event:
             self.peak_viewer()
 
-    def peak_finder(self, spec, cwt_range=[1, 3], rc_range=[4, 4], view_peaks=False):
+    def peak_finder(self, spec, cwt_range=[1, 3], rc_range=[4, 4]):
         self.hipk_freq = spec.freq
         self.hipk_val = spec.val
         self.hipk = peaks.fp(spec.val, self.peak_settings.threshold, cwt_range, rc_range)
-        if view_peaks:
-            self.peak_viewer()
 
     def peak_viewer(self):
         if self.hipk is None:
@@ -284,6 +288,8 @@ class Rids:
         import matplotlib.pyplot as plt
         plt.plot(self.hipk_freq, self.hipk_val)
         plt.plot(np.array(self.hipk_freq)[self.hipk], np.array(self.hipk_val)[self.hipk], 'kv')
+        if self.hipk_bw is not None:
+            plt.plot(np.array(self.hipk_freq)[self.hipk], np.array(self.hipk_bw), 'g|')
         plt.show()
 
     def viewer(self, threshold=None, show_components='all', show_baseline=True):
@@ -447,7 +453,7 @@ class Rids:
             th = self.peak_settings.threshold
             if abs(self.peak_settings.threshold) < 1.0:
                 th *= 100.0
-            pk = self.peaked_on[:3]
+            pk = self.peak_settings.peaked_on[:3]
             fn = "{}.{}.e{}.{}T{:.0f}.ridz".format(self.ident, self.time_stamp_first, self.nevents, pk, th)
             output_file = os.path.join(directory, fn)
             self.writer(output_file)
