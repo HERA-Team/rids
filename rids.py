@@ -1,10 +1,10 @@
-from __future__ import print_function
+from __future__ import print_function, absolute_import, division
 import json
 import os
+import gzip
 import copy
 import numpy as np
-import gzip
-import peaks  # Scipy option
+# import peaks  # Scipy option
 import peak_det  # Another option...
 
 
@@ -14,6 +14,25 @@ class Spectral:
         self.polarization = polarization
         self.freq = []
         self.val = []
+
+
+class PeakSettings:
+    """
+                peaked_on:  event_component on which peaks were found
+                threshold:  value used to threshold peaks
+                threshold_unit: unit of threshold
+    """
+    dattr = ['comment', 'peaked_on', 'delta', 'bw_range', 'peak_delta_values']
+    uattr = ['threshold']
+
+    def __init__(self, comment=''):
+        self.comment = comment
+        self.peaked_on = None
+        self.threshold = None
+        self.threshold_unit = None
+        self.delta = None
+        self.bw_range = []  # Range to search for bandwidth
+        self.delta_values = {'zen': 0.1, 'sa': 1.0}
 
 
 class Rids:
@@ -36,8 +55,6 @@ class Rids:
                            though not ideal, can be a descriptive word or word pair
                            for e.g. ongoing maxhold, etc
             time_constant_unit:  unit of time_constant
-            threshold:  value used to threshold peaks
-            threshold_unit: unit of threshold
             freq_unit:  unit of frequency used in spectra
             val_unit: unit of value used in spectra
             comment:  general comment; reader appends, doesn't overwrite
@@ -46,16 +63,16 @@ class Rids:
             time_stamp_last:           "      last          "
             cal:  calibration data by polarization
             events:  baseline or ave/maxhold spectra
-            peaked_on:  event_component on which peaks were found
     """
     dattr = ['ident', 'instrument', 'receiver', 'time_stamp_first', 'time_stamp_last',
-             'time_format', 'comment', 'freq_unit', 'val_unit', 'nevents', 'peaked_on']
-    uattr = ['channel_width', 'time_constant', 'threshold', 'rbw', 'vbw']
-    spectral_fields = ['comment', 'polarization', 'freq', 'val', 'maxhold', 'minhold']
+             'time_format', 'comment', 'freq_unit', 'val_unit', 'nevents']
+    uattr = ['channel_width', 'time_constant', 'rbw', 'vbw']
+    spectral_fields = ['comment', 'polarization', 'freq', 'val', 'maxhold', 'minhold', 'bw']
     polarizations = ['E', 'N', 'I']
     event_components = ['maxhold', 'minhold', 'val']
 
-    def __init__(self, comment=None, **diag):
+    def __init__(self, comment=None, **diagnose):
+        self.rid_file = None
         self.ident = None
         self.instrument = None
         self.receiver = None
@@ -67,24 +84,20 @@ class Rids:
         self.vbw_unit = None
         self.time_constant = None
         self.time_constant_unit = None
-        self.threshold = None
-        self.threshold_unit = None
         self.freq_unit = None
         self.val_unit = None
         self.comment = comment
         self.time_stamp_first = None
         self.time_stamp_last = None
         self.time_format = None
-        self.peaked_on = None
         self.nevents = 0
         self.cal = {}
         self.events = {}
+        self.peak_settings = PeakSettings()
         # --Other variables--
-        self.rid_file = None
         self.hipk = None
-        for a, b in diag.iteritems():
+        for a, b in diagnose.iteritems():
             setattr(self, a, b)
-        self.deltas = {'zen': 0.1, 'sa': 1.0}
 
     def reset(self):
         self.__init__(None)
@@ -115,8 +128,12 @@ class Rids:
                 self.append_comment(X)
             elif d in self.dattr:
                 setattr(self, d, X)
+            elif d in self.peak_settings.dattr:
+                setattr(self.peak_settings, d, X)
             elif d in self.uattr:
-                self._set_uattr(d, X)
+                set_unit_values(self, d, X)
+            elif d in self.peak_settings.uattr:
+                set_unit_values(self.peak_settings, d, X)
             elif d == 'cal':
                 for pol in X:
                     if pol not in self.polarizations:
@@ -137,18 +154,6 @@ class Rids:
                             continue
                         setattr(self.events[e], v, Y)
 
-    def _set_uattr(self, d, x):
-        v = x.split()
-        try:
-            d0 = float(v[0])
-        except ValueError:
-            d0 = v[0]
-        d1 = None
-        if len(v) > 1:
-            d1 = v[1]
-        setattr(self, d, d0)
-        setattr(self, d + '_unit', d1)
-
     def writer(self, filename, fix_list=True):
         """
         This writes a RID file with a full structure
@@ -156,8 +161,13 @@ class Rids:
         ds = {}
         for d in self.dattr:
             ds[d] = getattr(self, d)
+        for d in self.peak_settings.dattr:
+            ds[d] = getattr(self.peak_settings.dattr, d)
         for d in self.uattr:
             ds[d] = "{} {}".format(getattr(self, d), getattr(self, d + '_unit'))
+        for d in self.peak_settings.uattr:
+            ds[d] = "{} {}".format(getattr(self.peak_settings, d),
+                                   getattr(self.peak_settings, d + '_unit'))
         caltmp = {}
         for pol in self.polarizations:
             for v in self.spectral_fields:
@@ -235,15 +245,15 @@ class Rids:
                     break
             else:
                 return
-        if self.peaked_on is None:
-            self.peaked_on = ec
-        elif ec != self.peaked_on:
-            spectra[ec].comment += 'Peaked on different component: {} rather than {}'.format(ec, self.peaked_on)
+        if self.peak_settings.peaked_on is None:
+            self.peak_settings.peaked_on = ec
+        elif ec != self.peak_settings.peaked_on:
+            spectra[ec].comment += 'Peaked on different component: {} rather than {}'.format(ec, self.peak_settings.peaked_on)
         # self.peak_finder(spectra[ec], view_peaks=self.view_peaks_on_event)
-        if self.ident not in self.deltas:
+        if self.ident not in self.peak_settings.delta_values:
             delta = 0.1
         else:
-            delta = self.deltas[self.ident]
+            delta = self.peak_settings.delta_values[self.ident]
         self.peak_det(spectra[ec], delta=delta, view_peaks=self.view_peaks_on_event)
         self.events[event_name].freq = list(np.array(self.hipk_freq)[self.hipk])
         for ec, fn in fnargs.iteritems():
@@ -257,14 +267,14 @@ class Rids:
     def peak_det(self, spec, delta=0.1, view_peaks=False):
         self.hipk_freq = spec.freq
         self.hipk_val = spec.val
-        self.hipk = peak_det.peakdet(spec.val, delta=delta, threshold=self.threshold)
+        self.hipk = peak_det.peakdet(spec.val, delta=delta, threshold=self.peak_settings.threshold)
         if view_peaks:
             self.peak_viewer()
 
     def peak_finder(self, spec, cwt_range=[1, 3], rc_range=[4, 4], view_peaks=False):
         self.hipk_freq = spec.freq
         self.hipk_val = spec.val
-        self.hipk = peaks.fp(spec.val, self.threshold, cwt_range, rc_range)
+        self.hipk = peaks.fp(spec.val, self.peak_settings.threshold, cwt_range, rc_range)
         if view_peaks:
             self.peak_viewer()
 
@@ -283,15 +293,15 @@ class Rids:
         show_components:  event_components to show (list) or 'all'
         show_baseline:  include baseline spectra (Boolean)
         """
-        if threshold is not None and threshold < self.threshold:
-            print("Below threshold - using {}".format(self.threshold))
+        if threshold is not None and threshold < self.peak_settings.threshold:
+            print("Below threshold - using {}".format(self.peak_settings.threshold))
             threshold = None
         if threshold is not None:
             print("Threshold view not implemented yet.")
             threshold = None
         if isinstance(show_components, (str, unicode)):
             show_components = self.event_components
-        ec_list = {'maxhold': ('r', 'v'), 'minhold': ('b', '^'), 'val': ('k', '_')}
+        ec_list = {'maxhold': ('r', 'v'), 'minhold': ('b', '^'), 'val': ('k', '_'), 'bw': ('g', '|')}
         color_list = ['r', 'b', 'k', 'g', 'm', 'c', 'y', '0.25', '0.5', '0.75']
         line_list = ['-', '--', ':']
         c = 0
@@ -321,18 +331,19 @@ class Rids:
         print("RIDS Information")
         for d in self.dattr:
             print("\t{}:  {}".format(d, getattr(self, d)))
+        for d in self.peak_settings.dattr:
+            print("\tpeak.{}:  {}".format(d, getattr(self.peak_settings, d)))
         for d in self.uattr:
             print("\t{}:  {} {}".format(d, getattr(self, d), getattr(self, d + '_unit')))
+        for d in self.peak_settings.uattr:
+            print("\tpeak.{}:  {} {}".format(d, getattr(self.peak_settings, d), getattr(self.peak_settings, d + '_unit')))
         for p in self.polarizations:
             if p in self.cal:
                 print("\tcal {} {}".format(pol, len(self.cal['E'].freq) > 0))
         print("\t{} events".format(len(self.events)))
 
-    def stats(self):
-        print("Provide standard set of occupancy etc stats")
-
     def apply_cal(self):
-        print("Apply the calibration, if available.")
+        print("NOT IMPLEMENTED YET: Apply the calibration, if available.")
 
     def process_files(self, directory='.', ident='all', baseline=[0, -1], peak_on=False, events_per_pol=100, max_loops=1000):
         """
@@ -433,13 +444,26 @@ class Rids:
                         if x is not None:
                             os.remove(x)
             # Write the ridz file
-            th = self.threshold
-            if abs(self.threshold) < 1.0:
+            th = self.peak_settings.threshold
+            if abs(self.peak_settings.threshold) < 1.0:
                 th *= 100.0
             pk = self.peaked_on[:3]
             fn = "{}.{}.e{}.{}T{:.0f}.ridz".format(self.ident, self.time_stamp_first, self.nevents, pk, th)
             output_file = os.path.join(directory, fn)
             self.writer(output_file)
+
+
+def set_unit_values(C, d, x):
+    v = x.split()
+    try:
+        d0 = float(v[0])
+    except ValueError:
+        d0 = v[0]
+    d1 = None
+    if len(v) > 1:
+        d1 = v[1]
+    setattr(C, d, d0)
+    setattr(C, d + '_unit', d1)
 
 
 def spectrum_reader(filename, spec, polarization=None):

@@ -7,7 +7,7 @@ def peakdet(v, delta, threshold, x=None):
     From GitHub: endolith/peakdet.m
     Converted from MATLAB script at http://billauer.co.il/peakdet.html
 
-    Returns two arrays
+    Returns list of indices of max values
 
     function [maxtab, mintab]=peakdet(v, delta, x)
     %PEAKDET Detect peaks in a vector
@@ -72,4 +72,4 @@ def peakdet(v, delta, threshold, x=None):
                 mxpos = x[i]
                 lookformax = True
     return thresholded_max_only
-    #return array(maxtab), array(mintab)
+    # return array(maxtab), array(mintab)
