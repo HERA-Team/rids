@@ -5,9 +5,9 @@ import argparse
 import os.path
 
 ap = argparse.ArgumentParser()
+ap.add_argument('parameters', help="parameter/header json filename", default=None)
 ap.add_argument('-e', '--ecal', help="E-pol cal filename", default=None)
 ap.add_argument('-n', '--ncal', help="N-pol cal filename", default=None)
-ap.add_argument('-p', '--parameters', help="parameter/header json filename", default=None)
 ap.add_argument('-#', '--nevents', help="number of events per pol per file", default=100)
 ap.add_argument('-d', '--directory', help="directory for process files and where parameter file lives", default='.')
 ap.add_argument('-i', '--ident', help="can be a specific ident or 'all'", default='all')
