@@ -266,14 +266,16 @@ class Rids:
                 setattr(self.events[event_name], ec, list(np.array(spectra[ec].val)[self.hipk]))
             except IndexError:
                 pass
+        setattr(self.events[event_name], 'bw', self.hipk_bw)
 
     def peak_det(self, spec, delta=0.1):
         self.hipk_freq = spec.freq
         self.hipk_val = spec.val
         self.hipk = peak_det.peakdet(spec.val, delta=delta, threshold=self.peak_settings.threshold)
+        self.hipk = list(self.hipk)
 
     def find_bw(self):
-        self.hipk_bw = bw_finder.bw_finder(self.hipk_freq, self.hipk_val, self.hipk, self.bw_range)
+        self.hipk_bw = bw_finder.bw_finder(self.hipk_freq, self.hipk_val, self.hipk, self.peak_settings.bw_range)
         if self.view_peaks_on_event:
             self.peak_viewer()
 
@@ -289,7 +291,15 @@ class Rids:
         plt.plot(self.hipk_freq, self.hipk_val)
         plt.plot(np.array(self.hipk_freq)[self.hipk], np.array(self.hipk_val)[self.hipk], 'kv')
         if self.hipk_bw is not None:
-            plt.plot(np.array(self.hipk_freq)[self.hipk], np.array(self.hipk_bw), 'g|')
+            vv = np.array(self.hipk_val)[self.hipk]
+            if 'dB' in self.val_unit:
+                vv2 = vv - 6.0
+            else:
+                vv2 = vv / 4.0
+            fl = np.array(self.hipk_freq)[self.hipk] + np.array(self.hipk_bw)[:, 0]
+            fr = np.array(self.hipk_freq)[self.hipk] + np.array(self.hipk_bw)[:, 1]
+            plt.plot([fl, fl], [vv, vv2], 'm')
+            plt.plot([fr, fr], [vv, vv2], 'c')
         plt.show()
 
     def viewer(self, threshold=None, show_components='all', show_baseline=True):
@@ -299,6 +309,7 @@ class Rids:
         show_components:  event_components to show (list) or 'all'
         show_baseline:  include baseline spectra (Boolean)
         """
+        import matplotlib.pyplot as plt
         if threshold is not None and threshold < self.peak_settings.threshold:
             print("Below threshold - using {}".format(self.peak_settings.threshold))
             threshold = None
@@ -329,9 +340,24 @@ class Rids:
             for ec in show_components:
                 try:
                     i = self.event_components.index(ec)
-                    spectrum_plotter(self.rid_file, is_baseline, v.freq, getattr(v, ec), fmt[i], clr[i], ls[i])
+                    spectrum_plotter(self.rid_file, is_baseline, v.freq, getattr(v, ec), fmt[i], clr[i], ls[i], plt)
                 except AttributeError:
                     pass
+            if not is_baseline:
+                try:
+                    vv = np.array(getattr(v, self.peak_settings.peaked_on))
+                    fv = np.array(v.freq)
+                    bw = np.array(v.bw)
+                    if 'dB' in self.val_unit:
+                        vv2 = vv - 6.0
+                    else:
+                        vv2 = vv / 4.0
+                    fl = fv + bw[:, 0]
+                    fr = fv + bw[:, 1]
+                    plt.plot([fl, fl], [vv, vv2], clr[0])
+                    plt.plot([fr, fr], [vv, vv2], clr[0])
+                except AttributeError:
+                    continue
 
     def info(self):
         print("RIDS Information")
@@ -487,8 +513,7 @@ def spectrum_reader(filename, spec, polarization=None):
             spec.val.append(data[1])
 
 
-def spectrum_plotter(figure_name, is_baseline, x, y, fmt, clr, ls):
-    import matplotlib.pyplot as plt
+def spectrum_plotter(figure_name, is_baseline, x, y, fmt, clr, ls, plt):
     if not len(x) or not len(y):
         return
     try:
