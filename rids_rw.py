@@ -76,7 +76,7 @@ class RidsReadWrite:
             self.features.direct_attributes = []
             self.features.unit_attributes = []
         else:
-            self.features = feature_module.Feature()
+            self.features = feature_module
             for d in self.features.direct_attributes:
                 setattr(self, d, None)
             for d in self.features.unit_attributes:
@@ -87,7 +87,7 @@ class RidsReadWrite:
             setattr(self, a, b)
 
     def reset(self):
-        self.__init__(None, self.feature_module)
+        self.__init__(self.feature_module, None)
 
     def reader(self, filename, reset=True):
         """
@@ -116,11 +116,11 @@ class RidsReadWrite:
             elif d in self.direct_attributes:
                 setattr(self, d, X)
             elif d in self.features.direct_attributes:
-                setattr(self.feature, d, X)
+                setattr(self.features, d, X)
             elif d in self.unit_attributes:
                 set_unit_values(self, d, X)
             elif d in self.features.unit_attributes:
-                set_unit_values(self.feature, d, X)
+                set_unit_values(self.features, d, X)
             elif d == 'feature_sets':
                 print("This goes into the feature module somehow")
                 # for e in X:
@@ -178,18 +178,20 @@ class RidsReadWrite:
         if self.comment is None:
             self.comment = comment
         else:
+            print("RRW183:  ", comment)
+            print("         ", self.comment)
             self.comment += ('\n' + comment)
 
     def info(self):
         print("RIDS Information")
         for d in self.direct_attributes:
             print("\t{}:  {}".format(d, getattr(self, d)))
-        for d in self.features.direct_attributes:
-            print("\tfeature.{}:  {}".format(d, getattr(self.features, d)))
         for d in self.unit_attributes:
             print("\t{}:  {} {}".format(d, getattr(self, d), getattr(self, d + '_unit')))
+        for d in self.features.direct_attributes:
+            print("\tfeatures.{}:  {}".format(d, getattr(self.features, d)))
         for d in self.features.unit_attributes:
-            print("\tpeak.{}:  {} {}".format(d, getattr(self.peak_settings, d), getattr(self.peak_settings, d + '_unit')))
+            print("\tfeatures.{}:  {} {}".format(d, getattr(self.features, d), getattr(self.features, d + '_unit')))
         print("\t{} feature_sets".format(len(self.feature_sets)))
 
 

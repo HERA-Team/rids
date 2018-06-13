@@ -7,7 +7,7 @@ import peak_det  # Another option...
 import bw_finder
 
 
-class PeakSettings:
+class Peak:
     """
                 peaked_on:  event_component on which peaks were found
                 threshold:  value used to threshold peaks
