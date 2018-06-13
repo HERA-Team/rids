@@ -66,7 +66,7 @@ class Rids:
             events:  baseline or ave/maxhold spectra
     """
     dattr = ['ident', 'instrument', 'receiver', 'time_stamp_first', 'time_stamp_last',
-             'time_format', 'comment', 'freq_unit', 'val_unit', 'nevents']
+             'time_format', 'comment', 'freq_unit', 'val_unit', 'nevents', 'filename']
     uattr = ['channel_width', 'time_constant', 'rbw', 'vbw']
     spectral_fields = ['comment', 'polarization', 'freq', 'val', 'maxhold', 'minhold', 'bw']
     polarizations = ['E', 'N', 'I']
@@ -92,6 +92,7 @@ class Rids:
         self.time_stamp_last = None
         self.time_format = None
         self.nevents = 0
+        self.filename = None
         self.cal = {}
         self.events = {}
         self.peak_settings = PeakSettings()
@@ -481,8 +482,8 @@ class Rids:
                 th *= 100.0
             pk = self.peak_settings.peaked_on[:3]
             fn = "{}.{}.e{}.{}T{:.0f}.ridz".format(self.ident, self.time_stamp_first, self.nevents, pk, th)
-            output_file = os.path.join(directory, fn)
-            self.writer(output_file)
+            self.filename = os.path.join(directory, fn)
+            self.writer(self.filename)
 
 
 def set_unit_values(C, d, x):

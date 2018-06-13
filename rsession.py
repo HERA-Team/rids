@@ -15,8 +15,8 @@ ap.add_argument('-c', '--comment', help="append a comment", default=None)
 ap.add_argument('-m', '--max_loops', help="maximum number of iteration loops", default=1000)
 ap.add_argument('-^', '--peak_on', help="Peak on event component (if other than default)", default=None)
 ap.add_argument('-b', '--baselines', help="csv indices for baselines, or +step ('n' to stop if view)", default='0,-1')
-ap.add_argument('-s', '--show_info', help="show the info for provided filename", default=None)
-ap.add_argument('-v', '--view', help="show plot for provided filename", default=None)
+ap.add_argument('-s', '--show_info', help="show the info for provided filename", action="store_true")
+ap.add_argument('-v', '--view', help="show plot for provided filename", action="store_true")
 ap.add_argument('-t', '--threshold_view', help="new threshold for viewing (if possible)", default=None)
 ap.add_argument('-@', '--show_ec', help="csv list of event components to show (if different)", default='all')
 ap.add_argument('-!', '--view_peaks_on_event', help="view all peaks in process (diagnostic)", action="store_true")
@@ -24,7 +24,7 @@ ap.add_argument('-!', '--view_peaks_on_event', help="view all peaks in process (
 args = ap.parse_args()
 args.max_loops = int(args.max_loops)
 args.nevents = int(args.nevents)
-if args.view is not None:
+if args.view:
     if args.baselines[0].lower() == 'n':
         args.baselines = False
     else:
@@ -44,12 +44,12 @@ if args.threshold_view is not None:
 
 if __name__ == '__main__':
     r = rids.Rids(view_peaks_on_event=args.view_peaks_on_event)
-    if args.show_info is not None:
-        r.reader(args.show_info)
+    if args.show_info:
+        r.reader(args.parameters)
         r.info()
-    elif args.view is not None:
+    elif args.view:
         import matplotlib.pyplot as plt
-        r.reader(args.view)
+        r.reader(args.parameters)
         r.info()
         r.viewer(threshold=args.threshold_view, show_components=args.show_ec, show_baseline=args.baselines)
         plt.show()
