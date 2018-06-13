@@ -35,6 +35,14 @@ class Peak:
     def reset(self):
         self.__init__()
 
+    def read_feature_set(self, fs, X):
+        feature_set = rids_rw.Spectral()
+        for v, Y in X[fs].iteritems():
+            if v not in self.spectral_fields:
+                print("Unexpected field {} in {}".format(v, d))
+                continue
+            setattr(self.events[e], v, Y)
+
     def get_event(self, event, polarization, peak_on=None, **fnargs):
         """
         **fnargs are filenames for self.event_components {"event_component": <filename>}

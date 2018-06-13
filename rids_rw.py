@@ -121,15 +121,9 @@ class RidsReadWrite:
                 set_unit_values(self, d, X)
             elif d in self.features.unit_attributes:
                 set_unit_values(self.features, d, X)
-            elif d == 'feature_sets':
-                print("This goes into the feature module somehow")
-                # for e in X:
-                #     self.feature_sets[e] = Spectral()
-                #     for v, Y in X[e].iteritems():
-                #         if v not in self.spectral_fields:
-                #             print("Unexpected field {} in {}".format(v, d))
-                #             continue
-                #         setattr(self.events[e], v, Y)
+            elif d == 'events':#THEY ARE CALLED EVENTS UNTIL I WRITE A NEW ONE
+                for fs in X.values():
+                    self.feature_sets[fs] = self.features.read_feature_set(fs)
 
     def writer(self, filename, fix_list=True):
         """
