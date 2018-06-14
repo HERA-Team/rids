@@ -6,42 +6,18 @@ import copy
 import numpy as np
 
 
-class Spectral:
-    """
-    For now, the order matters...
-    """
-    spectral_fields = ['maxhold', 'minhold', 'val', 'comment', 'polarization', 'freq', 'bw']
-
-    def __init__(self, polarization='', comment=''):
-        self.comment = comment
-        self.polarization = polarization
-        self.freq = []
-        self.val = []
-
-
-class Temporal:
-    temporal_fields = ['comment', 'polarization', 'time', 'val']
-
-    def __init__(self, polarization='', comment=''):
-        self.comment = comment
-        self.polarization = polarization
-        self.time = []
-        self.val = []
-
-
 class RidsReadWrite:
     """
     RF Interference Data System (RIDS)
-    Reads/writes .rids/[.ridz] files, [zipped] JSON files with fields as described below
+    Reads/writes .ridm/.ridz files, JSON files with fields as described below
         and in feature module
     Any field may be omitted or missing.
-      - This first set is header information - typically stored in a .rids file that gets read/rewritten
+      - This first set is metadata - typically stored in a .ridm file that gets read/rewritten
             ident: description of filename
             instrument:  description of the instrument used
             receiver:  description of receiver used
             channel_width:  RF bandwidth (width in file or FFT)
             channel_width_unit:  unit of bandwidth
-            nsets:  number of feature_sets included in file
             time_constant: averaging time/maxhold reset time
                            though not ideal, can be a descriptive word or word pair
                            for e.g. ongoing maxhold, etc
@@ -49,15 +25,19 @@ class RidsReadWrite:
             freq_unit:  unit of frequency used in spectra
             val_unit: unit of value used in spectra
             comment:  general comment; reader appends, doesn't overwrite
+            time_format:  string indicating the format of timestamp in filename
       - These are typically set in data-taking session
+            rid_file:  records what it thinks the ridz filename should be
+            nsets:  number of feature_sets included in file
             time_stamp_first:  time_stamp for first feature_set
             time_stamp_last:           "      last          "
+            feature_module_name:  name of the feature module used
             feature_sets:  features etc defined in the feature module
     """
     # Along with the feature attributes, these are the allowed attributes for json r/w
     direct_attributes = ['rid_file', 'ident', 'instrument', 'receiver', 'comment',
                          'time_stamp_first', 'time_stamp_last', 'time_format',
-                         'freq_unit', 'val_unit', 'nsets']
+                         'freq_unit', 'val_unit', 'nsets', 'feature_module_name']
     unit_attributes = ['channel_width', 'time_constant']
     polarizations = ['E', 'N', 'I']
 
@@ -72,14 +52,16 @@ class RidsReadWrite:
         self.nsets = 0
         # Add in features
         self.feature_sets = {}
-        self.feature_module = feature_module  # used for reset
+        self.feature_module_for_reset = feature_module
         if feature_module is None:
             from argparse import Namespace
             self.features = Namespace()
             self.features.direct_attributes = []
             self.features.unit_attributes = []
+            self.feature_module_name = 'None'
         else:
             self.features = feature_module
+            self.feature_module_name = self.features.feature_module_name
             for d in self.features.direct_attributes:
                 setattr(self, d, None)
             for d in self.features.unit_attributes:
@@ -90,7 +72,7 @@ class RidsReadWrite:
             setattr(self, a, b)
 
     def reset(self):
-        self.__init__(self.feature_module, None)
+        self.__init__(self.feature_module_for_reset)
 
     def reader(self, filename, reset=True):
         """
@@ -98,7 +80,7 @@ class RidsReadWrite:
 
         Parameters:
         ------------
-        filename:  rids/z filename to read
+        filename:  rids/m/z filename to read
         reset:  If true, resets all elements.
                 If false, will overwrite headers etc but add events
                     (i.e. things with a unique key won't get overwritten)
@@ -166,7 +148,7 @@ class RidsReadWrite:
             if k in self.direct_attributes:
                 setattr(self, k, kwargs[k])
             elif k in self.unit_attributes:
-                self._set_unit_attributes(k, kwargs[k])
+                self.set_unit_values(self, k, kwargs[k])
 
     def append_comment(self, comment):
         if comment is None:

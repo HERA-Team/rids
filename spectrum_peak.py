@@ -7,7 +7,20 @@ import peak_det  # Another option...
 import bw_finder
 
 
-class Peak:
+class Spectral:
+    """
+    For now, the order matters since used to order peak finding priority
+    """
+    spectral_fields = ['maxhold', 'minhold', 'val', 'comment', 'polarization', 'freq', 'bw']
+
+    def __init__(self, polarization='', comment=''):
+        self.comment = comment
+        self.polarization = polarization
+        self.freq = []
+        self.val = []
+
+
+class Spectrum_Peak:
     """
     The feature_module needs to, at a minimum, define:
         direct_attributes:  list of strings
@@ -24,6 +37,7 @@ class Peak:
     """
     direct_attributes = ['comment', 'peaked_on', 'delta', 'bw_range', 'delta_values']
     unit_attributes = ['threshold', 'rbw', 'vbw']
+    feature_module_name = 'Spectrum_Peak'
 
     def __init__(self, comment='', view_ongoing=False):
         for d in self.direct_attributes:
@@ -37,7 +51,7 @@ class Peak:
         self.delta_values = {'zen': 0.1, 'sa': 1.0}
         # Other attributes
         self.rids = rids_rw.RidsReadWrite(self)
-        feature_set_info = rids_rw.Spectral()
+        feature_set_info = Spectral()
         self.feature_components = feature_set_info.spectral_fields
         self.hipk = None
         self.hipk_bw = None
@@ -46,8 +60,15 @@ class Peak:
     def reset(self):
         self.__init__()
 
+    def set(self, **kwargs):
+        for k in kwargs:
+            if k in self.direct_attributes:
+                setattr(self, k, kwargs[k])
+            elif k in self.unit_attributes:
+                self.rids.set_unit_values(self, k, kwargs[k])
+
     def read_feature_set(self, fs):
-        feature_set = rids_rw.Spectral()
+        feature_set = Spectral()
         for v, Y in fs.iteritems():
             if v not in self.feature_components:
                 print("Unexpected field {}".format(v))
@@ -55,10 +76,10 @@ class Peak:
             setattr(feature_set, v, Y)
         return feature_set
 
-    def get_fset(self, fset, polarization, peak_on=None, **fnargs):
+    def get_feature_sets(self, fset, polarization, peak_on=None, **fnargs):
         """
-        Get the feature set for current iteration
-        **fnargs are filenames for self.event_components {"event_component": <filename>}
+        Get the feature sets for current iteration
+        **fnargs are filenames for self.feature_components {"feature_component": <filename>}
         """
         fset_name = fset + polarization
         is_spectrum = 'data' in fset.lower() or 'cal' in fset.lower()
