@@ -20,20 +20,26 @@ class Spectral:
         self.val = []
 
 
-class Spectrum_Peak:
+class SpectrumPeak:
     """
-    The feature_module needs to, at a minimum, define:
-        direct_attributes:  list of strings
-        unit_attributes:  list of strings
-        feature_components: list of strings
-        feature_sets: dictionary
-        and instantiate rids_rw.RidsReadWrite() -- which has its own direct_attributes
-                                                   and unit_attributes which the feature
-                                                   module can use
+    This feature module searches a directory for spectrum files and saves feature sets based
+    peak finding (or saves rawdata).
 
+    The feature_module_name is "Spectrum_Peak"
+
+    Direct attributes are:
+        comment:
         peaked_on:  event_component on which peaks were found
+        delta:
+        bw_range:
+        delta_values:
+    Unit attributes are:
         threshold:  value used to threshold peaks
         threshold_unit: unit of threshold
+        vbw:
+        vbw_unit:
+        rbw:
+        rbw_unit:
     """
     direct_attributes = ['comment', 'peaked_on', 'delta', 'bw_range', 'delta_values']
     unit_attributes = ['threshold', 'rbw', 'vbw']
@@ -67,7 +73,7 @@ class Spectrum_Peak:
             elif k in self.unit_attributes:
                 self.rids.set_unit_values(self, k, kwargs[k])
 
-    def read_feature_set(self, fs):
+    def read_feature_set_dict(self, fs):
         feature_set = Spectral()
         for v, Y in fs.iteritems():
             if v not in self.feature_components:
@@ -76,13 +82,13 @@ class Spectrum_Peak:
             setattr(feature_set, v, Y)
         return feature_set
 
-    def get_feature_sets(self, fset, polarization, peak_on=None, **fnargs):
+    def get_feature_sets(self, fset_tag, polarization, peak_on=None, **fnargs):
         """
         Get the feature sets for current iteration
         **fnargs are filenames for self.feature_components {"feature_component": <filename>}
         """
-        fset_name = fset + polarization
-        is_spectrum = 'data' in fset.lower() or 'cal' in fset.lower()
+        fset_name = fset_tag + polarization
+        is_spectrum = 'data' in fset_tag.lower() or 'cal' in fset_tag.lower()
         self.rids.feature_sets[fset_name] = Spectral(polarization=polarization)
         self.rids.feature_sets[fset_name].freq = []
         spectra = {}
@@ -222,6 +228,10 @@ class Spectrum_Peak:
                 except AttributeError:
                     continue
 
+    def read_cal(self, filename, polarization):
+        tag = 'cal.' + filename + '_'
+        self.get_feature_sets(tag, polarization, val=filename)
+
     def apply_cal(self):
         print("NOT IMPLEMENTED YET: Apply the calibration, if available.")
 
@@ -310,8 +320,8 @@ class Spectrum_Peak:
                         bld[fc] = fcfns[i]
                     if not len(bld):
                         break
-                    evn = 'data.{}.{}.'.format(i, fnd['time_stamp'])
-                    self.get_event(evn, pol, **bld)
+                    fvn = 'data.{}.{}.'.format(i, fnd['time_stamp'])
+                    self.get_feature_sets(fvn, pol, **bld)
                 # Get the feature_sets
                 for i in range(num_to_read[pol]):
                     fcd = {}
@@ -319,8 +329,8 @@ class Spectrum_Peak:
                         fnd = peel_filename(fcfns[i], self.event_components)
                         if len(fnd):
                             fcd[fc] = fcfns[i]
-                    evn = fnd['time_stamp']
-                    self.get_event(evn, pol, peak_on=peak_on, **fcd)
+                    fvn = fnd['time_stamp']
+                    self.get_feature_sets(fvn, pol, peak_on=peak_on, **fcd)
                     for x in fcd.values():
                         if x is not None:
                             os.remove(x)

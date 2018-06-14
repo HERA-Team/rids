@@ -108,7 +108,7 @@ class RidsReadWrite:
                 set_unit_values(self.features, d, val)
             elif d == 'feature_sets':
                 for k, fs in val.iteritems():
-                    self.feature_sets[k] = self.features.read_feature_set(fs)
+                    self.feature_sets[k] = self.features.read_feature_set_dict(fs)
 
     def writer(self, filename, fix_list=True):
         """
