@@ -7,7 +7,10 @@ import numpy as np
 
 
 class Spectral:
-    spectral_fields = ['comment', 'polarization', 'freq', 'val', 'maxhold', 'minhold', 'bw']
+    """
+    For now, the order matters...
+    """
+    spectral_fields = ['maxhold', 'minhold', 'val', 'comment', 'polarization', 'freq', 'bw']
 
     def __init__(self, polarization='', comment=''):
         self.comment = comment
@@ -110,20 +113,20 @@ class RidsReadWrite:
             r_open = open
         with r_open(filename, 'rb') as f:
             data = json.load(f)
-        for d, X in data.iteritems():
+        for d, val in data.iteritems():
             if d == 'comment':
-                self.append_comment(X)
+                self.append_comment(val)
             elif d in self.direct_attributes:
-                setattr(self, d, X)
+                setattr(self, d, val)
             elif d in self.features.direct_attributes:
-                setattr(self.features, d, X)
+                setattr(self.features, d, val)
             elif d in self.unit_attributes:
-                set_unit_values(self, d, X)
+                set_unit_values(self, d, val)
             elif d in self.features.unit_attributes:
-                set_unit_values(self.features, d, X)
-            elif d == 'events':#THEY ARE CALLED EVENTS UNTIL I WRITE A NEW ONE
-                for fs in X.values():
-                    self.feature_sets[fs] = self.features.read_feature_set(fs)
+                set_unit_values(self.features, d, val)
+            elif d == 'feature_sets':
+                for k, fs in val.iteritems():
+                    self.feature_sets[k] = self.features.read_feature_set(fs)
 
     def writer(self, filename, fix_list=True):
         """
@@ -140,14 +143,13 @@ class RidsReadWrite:
             ds[d] = "{} {}".format(getattr(self.features, d),
                                    getattr(self.features, d + '_unit'))
         ds['feature_sets'] = {}
-        print("In feature modules also")
-        # for d in self.feature_sets:
-        #     ds['events'][d] = {}
-        #     for v in self.spectral_fields:
-        #         try:
-        #             ds['events'][d][v] = getattr(self.events[d], v)
-        #         except AttributeError:
-        #             continue
+        for d in self.feature_sets:
+            ds['feature_sets'][d] = {}
+            for v in self.features.feature_components:
+                try:
+                    ds['feature_sets'][d][v] = getattr(self.feature_sets[d], v)
+                except AttributeError:
+                    continue
         jsd = json.dumps(ds, sort_keys=True, indent=4, separators=(',', ':'))
         if fix_list:
             jsd = fix_json_list(jsd)
