@@ -1,3 +1,9 @@
+# _*_ coding: utf-8 _*_
+# Copy 2018 the HERA Project
+# Licensed under the 2-clause BSD license
+
+"""Feature module:  Spectrum_Peak"""
+
 from __future__ import print_function, absolute_import, division
 import os
 import numpy as np
@@ -41,9 +47,10 @@ class SpectrumPeak:
         rbw:
         rbw_unit:
     """
-    direct_attributes = ['comment', 'peaked_on', 'delta', 'bw_range', 'delta_values']
+    direct_attributes = ['comment', 'peaked_on', 'delta', 'bw_range', 'delta_values', 'fmin', 'fmax']
     unit_attributes = ['threshold', 'rbw', 'vbw']
     feature_module_name = 'Spectrum_Peak'
+    polarizations = ['E', 'N', 'I']
 
     def __init__(self, comment='', view_ongoing=False):
         for d in self.direct_attributes:
@@ -101,7 +108,7 @@ class SpectrumPeak:
                 if len(spectra[fc].freq) > len(self.rids.feature_sets[fset_name].freq):
                     self.rids.feature_sets[fset_name].freq = spectra[fc].freq
                 setattr(self.rids.feature_sets[fset_name], fc, spectra[fc].val)
-        self.nsets += 1
+        self.rids.nsets += 1
         if is_spectrum:
             return
 
@@ -119,15 +126,11 @@ class SpectrumPeak:
         elif fc != self.peaked_on:
             spectra[fc].comment += 'Peaked on different component: {} rather than {}'.format(fc, self.peaked_on)
         # self.peak_finder(spectra[ec], view_peaks=self.view_peaks_on_event)
-        if self.rids.ident not in self.delta_values:
-            delta = 0.1
-        else:
-            delta = self.delta_values[self.rids.ident]
-        self.peak_det(spectra[fc], delta=delta)
+        self.peak_det(spectra[fc], delta=self.delta)
         self.find_bw()
 
         # put values in feature set dictionary
-        self.rids.feature_sets[event_name].freq = list(np.array(self.hipk_freq)[self.hipk])
+        self.rids.feature_sets[fset_name].freq = list(np.array(self.hipk_freq)[self.hipk])
         for fc, sfn in fnargs.iteritems():
             if sfn is None:
                 continue
@@ -136,6 +139,12 @@ class SpectrumPeak:
             except IndexError:
                 pass
         self.rids.feature_sets[fset_name].bw = self.hipk_bw
+        ftr_fmin = min(self.rids.feature_sets[fset_name].freq)
+        ftr_fmax = max(self.rids.feature_sets[fset_name].freq)
+        if ftr_fmin < self.fmin:
+            self.fmin = ftr_fmin
+        if ftr_fmax > self.fmax:
+            self.fmax = ftr_fmax
 
     def peak_det(self, spec, delta=0.1):
         self.hipk_freq = spec.freq
@@ -171,7 +180,7 @@ class SpectrumPeak:
             plt.plot([fr, fr], [vv, vv2], 'c')
         plt.show()
 
-    def fset_viewer(self, threshold=None, show_components='all', show_data=True):
+    def viewer(self, threshold=None, show_components='all', show_data=True):
         """
         Parameters:
         ------------
@@ -179,54 +188,65 @@ class SpectrumPeak:
         show_data:  include data spectra (Boolean)
         """
         import matplotlib.pyplot as plt
+        import collections
         if threshold is not None and threshold < self.threshold:
             print("Below threshold - using {}".format(self.threshold))
             threshold = None
         if threshold is not None:
             print("Threshold view not implemented yet.")
             threshold = None
+        fc_list = collections.OrderedDict([('maxhold', ('r', 'v')), ('minhold', ('b', '^')), ('val', ('k', '_'))])
         if isinstance(show_components, (str, unicode)):
-            show_components = self.feature_components
-        fc_list = {'maxhold': ('r', 'v'), 'minhold': ('b', '^'), 'val': ('k', '_'), 'bw': ('g', '|')}
+            show_components = fc_list.keys()
         color_list = ['r', 'b', 'k', 'g', 'm', 'c', 'y', '0.25', '0.5', '0.75']
         line_list = ['-', '--', ':']
         c = 0
         bl = 0
         for f, v in self.rids.feature_sets.iteritems():
-            is_data = 'data' in f.lower() or 'cal' in f.lower()
+            is_data = 'data' in f.lower() or 'cal' in f.lower() or 'baseline' in f.lower()
             if is_data and not show_data:
                 continue
             if is_data:
-                clr = [fc_list[x][0] for x in self.feature_components]
-                ls = [line_list[bl % len(line_list)]] * len(self.feature_components)
-                fmt = [None] * len(self.feature_components)
+                clr = [fc_list[x][0] for x in show_components]
+                ls = [line_list[bl % len(line_list)]] * len(show_components)
+                fmt = [None] * len(show_components)
                 bl += 1
             else:
-                clr = [color_list[c % len(color_list)]] * len(self.feature_components)
-                ls = [None] * len(self.feature_components)
-                fmt = [fc_list[x][1] for x in self.feature_components]
+                clr = [color_list[c % len(color_list)]] * len(show_components)
+                ls = [None] * len(show_components)
+                fmt = [fc_list[x][1] for x in fc_list]
                 c += 1
             for fc in show_components:
                 try:
-                    i = self.feature_components.index(fc)
-                    spectrum_plotter(self.rid_file, is_data, v.freq, getattr(v, fc), fmt[i], clr[i], ls[i], plt)
+                    i = show_components.index(fc)
+                    spectrum_plotter(self.rids.rid_file, is_data, v.freq, getattr(v, fc), fmt[i], clr[i], ls[i], plt)
                 except AttributeError:
                     pass
-            if not is_data:
-                try:
-                    vv = np.array(getattr(v, self.peaked_on))
-                    fv = np.array(v.freq)
-                    bw = np.array(v.bw)
-                    if 'dB' in self.val_unit:
-                        vv2 = vv - 6.0
-                    else:
-                        vv2 = vv / 4.0
-                    fl = fv + bw[:, 0]
-                    fr = fv + bw[:, 1]
-                    plt.plot([fl, fl], [vv, vv2], clr[0])
-                    plt.plot([fr, fr], [vv, vv2], clr[0])
-                except AttributeError:
-                    continue
+            if is_data:
+                continue
+            # Now plot bandwidth
+            try:
+                vv = np.array(getattr(v, self.peaked_on))
+                fv = np.array(v.freq)
+                bw = np.array(v.bw)
+                if 'dB' in self.rids.val_unit:
+                    vv2 = vv - 6.0
+                else:
+                    vv2 = vv / 4.0
+                fl = fv + bw[:, 0]
+                if self.fmin is not None:
+                    ifl = np.where(fl < self.fmin)
+                    fl[ifl] = self.fmin
+                fr = fv + bw[:, 1]
+                if self.fmax is not None:
+                    ifr = np.where(fr > self.fmax)
+                    fr[ifr] = self.fmax
+                for j in range(len(fl)):
+                    plt.plot([fl[j], fl[j]], [vv[j], vv2[j]], clr[0])
+                    plt.plot([fr[j], fr[j]], [vv[j], vv2[j]], clr[0])
+            except AttributeError:
+                continue
+        plt.show()
 
     def read_cal(self, filename, polarization):
         tag = 'cal.' + filename + '_'
@@ -241,7 +261,7 @@ class SpectrumPeak:
         produce ridz files.
 
         Format of the spectrum filename (peel_filename below):
-        <path>/identifier.time-stamp.event_component.polarization
+        <path>/identifier.time-stamp.feature_component.polarization
 
         Parameters:
         ------------
@@ -254,18 +274,20 @@ class SpectrumPeak:
         loop = True
         loop_ctr = 0
         self.ident = None
+        self.fmin = 1E9
+        self.fmax = -1E9
         while (loop):
             loop_ctr += 1
             if loop_ctr > max_loops:
                 break
-            # Set up the event_component file dictionary
-            f = {}
+            # Set up the feature_component file dictionary
+            ftrfiles = {}
             max_pol_cnt = {}
             for pol in self.polarizations:
-                f[pol] = {}
+                ftrfiles[pol] = {}
                 max_pol_cnt[pol] = 0
-                for ec in self.feature_components:
-                    f[pol][ec] = []
+                for fc in self.feature_components:
+                    ftrfiles[pol][fc] = []
             # Go through and sort the available files into file dictionary
             loop = False
             available_files = sorted(os.listdir(directory))
@@ -280,26 +302,30 @@ class SpectrumPeak:
                     continue
                 if ident == 'all' or ident == fnd['ident']:
                     loop = True
-                    file_list = f[fnd['polarization']][fnd['feature_component']]
+                    file_list = ftrfiles[fnd['polarization']][fnd['feature_component']]
                     if len(file_list) > sets_per_pol:
                         continue
                     file_times.append(fnd['time_stamp'])
                     file_list.append(os.path.join(directory, af))
                     if self.rids.ident is None:
                         self.rids.ident = fnd['ident']
+            if self.rids.ident not in self.delta_values:
+                self.delta = 0.1
+            else:
+                self.delta = self.delta_values[self.rids.ident]
             if not loop:
                 break
             # Go through and count the sorted available files
             num_to_read = {}
-            for pol in f:
-                for fc in f[pol]:
-                    if len(f[pol][fc]) > max_pol_cnt[pol]:
-                        max_pol_cnt[pol] = len(f[pol][fc])
-                for fc in f[pol]:
-                    diff_len = max_pol_cnt[pol] - len(f[pol][fc])
+            for pol in ftrfiles:
+                for fc in ftrfiles[pol]:
+                    if len(ftrfiles[pol][fc]) > max_pol_cnt[pol]:
+                        max_pol_cnt[pol] = len(ftrfiles[pol][fc])
+                for fc in ftrfiles[pol]:
+                    diff_len = max_pol_cnt[pol] - len(ftrfiles[pol][fc])
                     if diff_len > 0:
-                        f[pol][fc] = f[pol][fc] + [None] * diff_len
-                    num_to_read[pol] = len(f[pol][fc])  # Yes, does get reset
+                        ftrfiles[pol][fc] = ftrfiles[pol][fc] + [None] * diff_len
+                    num_to_read[pol] = len(ftrfiles[pol][fc])  # Yes, does get reset
             file_times = sorted(file_times)
             self.rids.time_stamp_first = file_times[0]
             self.rids.time_stamp_last = file_times[-1]
@@ -313,7 +339,7 @@ class SpectrumPeak:
                 # Get the data spectrum files
                 for i in data:
                     bld = {}
-                    for fc, fcfns in f[pol].iteritems():
+                    for fc, fcfns in ftrfiles[pol].iteritems():
                         if abs(i) >= len(fcfns) or fcfns[i] is None:
                             continue
                         fnd = peel_filename(fcfns[i], self.feature_components)
@@ -325,13 +351,16 @@ class SpectrumPeak:
                 # Get the feature_sets
                 for i in range(num_to_read[pol]):
                     fcd = {}
-                    for fc, fcfns in f[pol].iteritems():
-                        fnd = peel_filename(fcfns[i], self.event_components)
+                    for fc, fcfns in ftrfiles[pol].iteritems():
+                        fnd = peel_filename(fcfns[i], self.feature_components)
+                        if 'time_stamp' in fnd:
+                            fnd_ts = fnd['time_stamp']
                         if len(fnd):
                             fcd[fc] = fcfns[i]
-                    fvn = fnd['time_stamp']
-                    self.get_feature_sets(fvn, pol, peak_on=peak_on, **fcd)
-                    for x in fcd.values():
+                    if not len(fcd):
+                        continue
+                    self.get_feature_sets(fnd_ts, pol, peak_on=peak_on, **fcd)
+                    for x in fcd.itervalues():
                         if x is not None:
                             os.remove(x)
             # Write the ridz file
@@ -339,9 +368,11 @@ class SpectrumPeak:
             if abs(self.threshold) < 1.0:
                 th *= 100.0
             pk = self.peaked_on[:3]
-            fn = "{}.{}.e{}.{}T{:.0f}.ridz".format(self.rids.ident, self.rids.time_stamp_first, self.rids.nsets, pk, th)
+            fn = "{}_{}.{}.e{}.{}T{:.0f}.ridz".format(self.rids.ident, self.feature_module_name,
+                                                      self.rids.time_stamp_first, self.rids.nsets,
+                                                      pk, th)
             self.filename = os.path.join(directory, fn)
-            self.writer(self.filename)
+            self.rids.writer(self.filename)
 
 
 def spectrum_reader(filename, spec, polarization=None):
@@ -377,7 +408,7 @@ def spectrum_plotter(figure_name, is_data, x, y, fmt, clr, ls, plt):
             plt.plot(x, _Y, fmt, color=clr)
 
 
-def peel_filename(v, eclist=None):
+def peel_filename(v, fclist=None):
     if v is None:
         return {}
     s = v.split('/')[-1].split('.')
@@ -385,13 +416,13 @@ def peel_filename(v, eclist=None):
         return {}
     fnd = {'ident': s[0]}
     fnd['time_stamp'] = '.'.join(s[1:-2])
-    fnd['event_component'] = s[-2].lower()
+    fnd['feature_component'] = s[-2].lower()
     fnd['polarization'] = s[-1].upper()
-    if eclist is None:
+    if fclist is None:
         return fnd
-    eclist = [x.lower() for x in eclist]
-    for ec in eclist:
-        if fnd['event_component'] in ec:
-            fnd['event_component'] = ec
+    fclist = [x.lower() for x in fclist]
+    for fc in fclist:
+        if fnd['feature_component'] in fc:
+            fnd['feature_component'] = fc
             return fnd
     return {}

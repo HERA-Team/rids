@@ -51,11 +51,9 @@ if __name__ == '__main__':
         r.rids.reader(full_filename)
         r.rids.info()
     elif args.view:
-        import matplotlib.pyplot as plt
         r.rids.reader(full_filename)
         r.rids.info()
-        r.viewer(threshold=args.threshold_view, show_components=args.show_fc, show_rawdata=args.rawdata)
-        plt.show()
+        r.viewer(threshold=args.threshold_view, show_components=args.show_fc, show_data=args.rawdata)
     else:
         r.rids.reader(full_filename)
         r.rids.append_comment(args.comment)

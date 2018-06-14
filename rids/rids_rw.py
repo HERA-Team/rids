@@ -39,7 +39,6 @@ class RidsReadWrite:
                          'time_stamp_first', 'time_stamp_last', 'time_format',
                          'freq_unit', 'val_unit', 'nsets', 'feature_module_name']
     unit_attributes = ['channel_width', 'time_constant']
-    polarizations = ['E', 'N', 'I']
 
     def __init__(self, feature_module=None, comment=None, **diagnose):
         for d in self.direct_attributes:
@@ -95,6 +94,7 @@ class RidsReadWrite:
             r_open = open
         with r_open(filename, 'rb') as f:
             data = json.load(f)
+        self.nsets = 0
         for d, val in data.iteritems():
             if d == 'comment':
                 self.append_comment(val)
@@ -106,24 +106,32 @@ class RidsReadWrite:
                 set_unit_values(self, d, val)
             elif d in self.features.unit_attributes:
                 set_unit_values(self.features, d, val)
-            elif d == 'feature_sets':
+            elif d == 'feature_sets' or d == 'events':
                 for k, fs in val.iteritems():
                     self.feature_sets[k] = self.features.read_feature_set_dict(fs)
+                    self.nsets += 1
 
     def writer(self, filename, fix_list=True):
         """
-        This writes a RID file with a full structure
+        This writes a RID file with a full structure.  If a field is None it ignores.
         """
         ds = {}
         for d in self.direct_attributes:
-            ds[d] = getattr(self, d)
+            val = getattr(self, d)
+            if val is not None:
+                ds[d] = val
         for d in self.features.direct_attributes:
-            ds[d] = getattr(self.features, d)
+            val = getattr(self.features, d)
+            if val is not None:
+                ds[d] = val
         for d in self.unit_attributes:
-            ds[d] = "{} {}".format(getattr(self, d), getattr(self, d + '_unit'))
+            val = getattr(self, d)
+            if val is not None:
+                ds[d] = "{} {}".format(val, getattr(self, d + '_unit'))
         for d in self.features.unit_attributes:
-            ds[d] = "{} {}".format(getattr(self.features, d),
-                                   getattr(self.features, d + '_unit'))
+            val = getattr(self.features, d)
+            if val is not None:
+                ds[d] = "{} {}".format(val, getattr(self.features, d + '_unit'))
         ds['feature_sets'] = {}
         for d in self.feature_sets:
             ds['feature_sets'][d] = {}
