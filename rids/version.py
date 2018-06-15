@@ -69,4 +69,4 @@ SCRIPTS = [p for p in glob.glob('scripts/*') if not p.endswith('~')]
 #         pjoin('data', 'test_data', '*.tst'),
 #     ]
 # }
-REQUIRES = ["numpy", "matplotlib"]
+REQUIRES = ["numpy", "matplotlib", "astropy"]

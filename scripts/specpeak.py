@@ -58,6 +58,8 @@ if __name__ == '__main__':
         r.info()
         r.viewer(threshold=args.threshold_view, show_components=args.show_fc, show_data=args.rawdata)
     else:
+        if '.' not in args.parameters:
+            full_filename += '.ridm'
         r.reader(full_filename)
         r.rids.append_comment(args.comment)
         if args.ecal is not None:

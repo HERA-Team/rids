@@ -9,4 +9,4 @@ from . import spectrum_peak
 from . import bw_finder
 from . import peak_det
 from . import peaks
-from . import stats
+from . import sp_handling

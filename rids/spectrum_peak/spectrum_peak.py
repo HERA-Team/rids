@@ -9,7 +9,7 @@ This module defines the format of the Spectrum_Peak feature_sets.
 from __future__ import print_function, absolute_import, division
 import os
 import numpy as np
-from rids import rids_rw
+from rids import rids
 # import peaks  # Scipy option
 import peak_det  # Another option...
 import bw_finder
@@ -65,7 +65,7 @@ class SpectrumPeak:
         self.bw_range = []  # Range to search for bandwidth
         self.delta_values = {'zen': 0.1, 'sa': 1.0}
         # Copy rids to local
-        self.rids = rids_rw.RidsReadWrite(self)
+        self.rids = rids.Rids(self)
         self.reader = self.rids.reader
         self.writer = self.rids.writer
         self.info = self.rids.info
@@ -85,11 +85,6 @@ class SpectrumPeak:
                 setattr(self, k, kwargs[k])
             elif k in self.unit_attributes:
                 self.rids.set_unit_values(self, k, kwargs[k])
-
-    def get_datetime_from_time_stamp(self, ts):
-        print(ts)
-        if self.rids.time_format.lower() == 'julian':
-            print('julian')
 
     def read_feature_set_dict(self, fs):
         feature_set = Spectral()
@@ -316,7 +311,7 @@ class SpectrumPeak:
                     file_list = ftrfiles[fnd['polarization']][fnd['feature_component']]
                     if len(file_list) > sets_per_pol:
                         continue
-                    file_times.append(fnd['time_stamp'])
+                    file_times.append(fnd['timestamp'])
                     file_list.append(os.path.join(directory, af))
                     if self.rids.ident is None:
                         self.rids.ident = fnd['ident']
@@ -338,8 +333,8 @@ class SpectrumPeak:
                         ftrfiles[pol][fc] = ftrfiles[pol][fc] + [None] * diff_len
                     num_to_read[pol] = len(ftrfiles[pol][fc])  # Yes, does get reset
             file_times = sorted(file_times)
-            self.rids.time_stamp_first = file_times[0]
-            self.rids.time_stamp_last = file_times[-1]
+            self.rids.timestamp_first = file_times[0]
+            self.rids.timestamp_last = file_times[-1]
             # Process the files
             self.rids.feature_sets = {}
             self.rids.nsets = 0
@@ -357,15 +352,15 @@ class SpectrumPeak:
                         bld[fc] = fcfns[i]
                     if not len(bld):
                         break
-                    fvn = 'data.{}.{}.'.format(i, fnd['time_stamp'])
+                    fvn = 'data.{}.{}.'.format(i, fnd['timestamp'])
                     self.get_feature_sets(fvn, pol, **bld)
                 # Get the feature_sets
                 for i in range(num_to_read[pol]):
                     fcd = {}
                     for fc, fcfns in ftrfiles[pol].iteritems():
                         fnd = peel_filename(fcfns[i], self.feature_components)
-                        if 'time_stamp' in fnd:
-                            fnd_ts = fnd['time_stamp']
+                        if 'timestamp' in fnd:
+                            fnd_ts = fnd['timestamp']
                         if len(fnd):
                             fcd[fc] = fcfns[i]
                     if not len(fcd):
@@ -379,8 +374,8 @@ class SpectrumPeak:
             if abs(self.threshold) < 1.0:
                 th *= 100.0
             pk = self.peaked_on[:3]
-            fn = "{}_{}.{}.e{}.{}T{:.0f}.ridz".format(self.rids.ident, self.feature_module_name,
-                                                      self.rids.time_stamp_first, self.rids.nsets,
+            fn = "{}_{}.{}.n{}.{}T{:.0f}.ridz".format(self.rids.ident, self.feature_module_name,
+                                                      self.rids.timestamp_first, self.rids.nsets,
                                                       pk, th)
             self.filename = os.path.join(directory, fn)
             self.rids.writer(self.filename)
@@ -423,10 +418,10 @@ def peel_filename(v, fclist=None):
     if v is None:
         return {}
     s = v.split('/')[-1].split('.')
-    if len(s) not in [4, 5]:  # time_stamp may have one '.' in it
+    if len(s) not in [4, 5]:  # timestamp may have one '.' in it
         return {}
     fnd = {'ident': s[0]}
-    fnd['time_stamp'] = '.'.join(s[1:-2])
+    fnd['timestamp'] = '.'.join(s[1:-2])
     fnd['feature_component'] = s[-2].lower()
     fnd['polarization'] = s[-1].upper()
     if fclist is None:

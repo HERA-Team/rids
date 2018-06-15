@@ -28,10 +28,10 @@ if __name__ == '__main__':
         if ident != 'zen':
             continue
         day = af.split('.')[1]
-        time_stamp = '.'.join(af.split('.')[1:3])
+        timestamp = '.'.join(af.split('.')[1:3])
         if args.day_to_use is not None and day != args.day_to_use:
             continue
-        print(ident, time_stamp)
+        print(ident, timestamp)
         df = np.load(af)
         c = np.zeros(args.num_chan)
         right_num_chan = True
@@ -45,7 +45,7 @@ if __name__ == '__main__':
             c += v
         if not args.dontwrite and right_num_chan:
             c /= len(df['times'])
-            nfn = "{}.{}.val.I".format(ident, time_stamp)
+            nfn = "{}.{}.val.I".format(ident, timestamp)
             nfn = os.path.join(args.path_to_save, nfn)
             with open(nfn, 'w') as fp:
                 for fc, cc in zip(freq, c):

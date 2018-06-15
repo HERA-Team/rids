@@ -6,10 +6,11 @@ import copy
 import numpy as np
 
 
-class RidsReadWrite:
+class Rids:
     """
     RF Interference Data System (RIDS)
-    Reads/writes .ridm/.ridz files, JSON files with fields as described below
+    Reads/writes .ridm/.ridz files, JSON files with fields as described below.  This is the building
+    block and should read any rids file.  If feature_module is None it ignores features.
         and in feature module
     Any field may be omitted or missing.
       - This first set is metadata - typically stored in a .ridm file that gets read/rewritten
@@ -29,14 +30,14 @@ class RidsReadWrite:
       - These are typically set in data-taking session
             rid_file:  records what it thinks the ridz filename should be
             nsets:  number of feature_sets included in file
-            time_stamp_first:  time_stamp for first feature_set
-            time_stamp_last:           "      last          "
+            timestamp_first:  timestamp for first feature_set
+            timestamp_last:           "      last          "
             feature_module_name:  name of the feature module used
             feature_sets:  features etc defined in the feature module
     """
     # Along with the feature attributes, these are the allowed attributes for json r/w
     direct_attributes = ['rid_file', 'ident', 'instrument', 'receiver', 'comment',
-                         'time_stamp_first', 'time_stamp_last', 'time_format',
+                         'timestamp_first', 'timestamp_last', 'time_format',
                          'freq_unit', 'val_unit', 'nsets', 'feature_module_name']
     unit_attributes = ['channel_width', 'time_constant']
 
@@ -58,6 +59,7 @@ class RidsReadWrite:
             self.features.direct_attributes = []
             self.features.unit_attributes = []
             self.feature_module_name = 'None'
+            self.read_feature_set_dict = None
         else:
             self.features = feature_module
             self.feature_module_name = self.features.feature_module_name
@@ -72,6 +74,21 @@ class RidsReadWrite:
 
     def reset(self):
         self.__init__(self.feature_module_for_reset)
+
+    def get_datetime_from_timestamp(self, ts):
+        import datetime
+        if self.time_format.lower() == 'julian':
+            from astropy.time import Time
+            if isinstance(ts, (str, unicode)):
+                ts = float(ts)
+            dt = Time(ts, format='jd', scale='utc')
+            return dt.datetime
+        elif '%' in self.time_format:
+            try:
+                return datetime.datetime.strptime(ts, str(self.time_format))
+            except ValueError:
+                print("{} is invalid format for {}".format(self.time_format, ts))
+        return None
 
     def reader(self, filename, reset=True):
         """
@@ -107,6 +124,8 @@ class RidsReadWrite:
             elif d in self.features.unit_attributes:
                 set_unit_values(self.features, d, val)
             elif d == 'feature_sets' or d == 'events':
+                if self.read_feature_set_dict is None:
+                    continue
                 for k, fs in val.iteritems():
                     self.feature_sets[k] = self.features.read_feature_set_dict(fs)
                     self.nsets += 1

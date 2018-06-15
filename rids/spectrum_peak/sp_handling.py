@@ -10,7 +10,7 @@ This has various modules to handle and view ridz files.
 
 """
 from __future__ import print_function, absolute_import, division
-from rids import spectrum_peak as sp
+from . import spectrum_peak as sp
 
 
 class SPHandling:
