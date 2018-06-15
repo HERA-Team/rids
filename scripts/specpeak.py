@@ -1,10 +1,13 @@
 #! /usr/bin/env python
+# _*_ coding: utf-8 _*_
+# Copy 2018 the HERA Project
+# Licensed under the 2-clause BSD license
 from __future__ import print_function, division, absolute_import
 
 import argparse
 import os.path
 
-import spectrum_peak as sp
+from rids import spectrum_peak as sp
 
 ap = argparse.ArgumentParser()
 ap.add_argument('parameters', help="parameter/header json filename", default=None)
@@ -46,16 +49,16 @@ if args.threshold_view is not None:
 full_filename = os.path.join(args.directory, args.parameters)
 
 if __name__ == '__main__':
-    r = sp.SpectrumPeak(view_ongoing=args.view_peaks_ongoing)
+    r = sp.spectrum_peak.SpectrumPeak(view_ongoing=args.view_peaks_ongoing)
     if args.show_info:
-        r.rids.reader(full_filename)
-        r.rids.info()
+        r.reader(full_filename)
+        r.info()
     elif args.view:
-        r.rids.reader(full_filename)
-        r.rids.info()
+        r.reader(full_filename)
+        r.info()
         r.viewer(threshold=args.threshold_view, show_components=args.show_fc, show_data=args.rawdata)
     else:
-        r.rids.reader(full_filename)
+        r.reader(full_filename)
         r.rids.append_comment(args.comment)
         if args.ecal is not None:
             r.read_cal(args.ecal, 'E')

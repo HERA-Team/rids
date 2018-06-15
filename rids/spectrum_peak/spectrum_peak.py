@@ -2,7 +2,9 @@
 # Copy 2018 the HERA Project
 # Licensed under the 2-clause BSD license
 
-"""Feature module:  Spectrum_Peak"""
+"""Feature module:  Spectrum_Peak
+This module defines the format of the Spectrum_Peak feature_sets.
+"""
 
 from __future__ import print_function, absolute_import, division
 import os
@@ -62,11 +64,12 @@ class SpectrumPeak:
         self.comment = comment
         self.bw_range = []  # Range to search for bandwidth
         self.delta_values = {'zen': 0.1, 'sa': 1.0}
-        # Other attributes
+        # Copy rids to local
         self.rids = rids_rw.RidsReadWrite(self)
         self.reader = self.rids.reader
         self.writer = self.rids.writer
         self.info = self.rids.info
+        # Other attributes
         feature_set_info = Spectral()
         self.feature_components = feature_set_info.spectral_fields
         self.hipk = None
@@ -82,6 +85,11 @@ class SpectrumPeak:
                 setattr(self, k, kwargs[k])
             elif k in self.unit_attributes:
                 self.rids.set_unit_values(self, k, kwargs[k])
+
+    def get_datetime_from_time_stamp(self, ts):
+        print(ts)
+        if self.rids.time_format.lower() == 'julian':
+            print('julian')
 
     def read_feature_set_dict(self, fs):
         feature_set = Spectral()
