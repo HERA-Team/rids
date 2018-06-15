@@ -20,6 +20,7 @@ class Spectral:
     For now, the order matters since used to order peak finding priority
     """
     spectral_fields = ['maxhold', 'minhold', 'val', 'comment', 'polarization', 'freq', 'bw']
+    measured_spectral_fields = ['maxhold', 'minhold', 'val']
 
     def __init__(self, polarization='', comment=''):
         self.comment = comment

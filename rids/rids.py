@@ -56,10 +56,10 @@ class Rids:
         if feature_module is None:
             from argparse import Namespace
             self.features = Namespace()
+            self.feature_module_name = 'None'
             self.features.direct_attributes = []
             self.features.unit_attributes = []
-            self.feature_module_name = 'None'
-            self.read_feature_set_dict = None
+            self.features.read_feature_set_dict = None
         else:
             self.features = feature_module
             self.feature_module_name = self.features.feature_module_name
@@ -124,7 +124,7 @@ class Rids:
             elif d in self.features.unit_attributes:
                 set_unit_values(self.features, d, val)
             elif d == 'feature_sets' or d == 'events':
-                if self.read_feature_set_dict is None:
+                if self.features.read_feature_set_dict is None:
                     continue
                 for k, fs in val.iteritems():
                     self.feature_sets[k] = self.features.read_feature_set_dict(fs)
