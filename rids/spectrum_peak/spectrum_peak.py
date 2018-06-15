@@ -7,7 +7,7 @@
 from __future__ import print_function, absolute_import, division
 import os
 import numpy as np
-import rids_rw
+from rids import rids_rw
 # import peaks  # Scipy option
 import peak_det  # Another option...
 import bw_finder
@@ -64,6 +64,9 @@ class SpectrumPeak:
         self.delta_values = {'zen': 0.1, 'sa': 1.0}
         # Other attributes
         self.rids = rids_rw.RidsReadWrite(self)
+        self.reader = self.rids.reader
+        self.writer = self.rids.writer
+        self.info = self.rids.info
         feature_set_info = Spectral()
         self.feature_components = feature_set_info.spectral_fields
         self.hipk = None

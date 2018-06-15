@@ -5,7 +5,6 @@
 from __future__ import absolute_import, division, print_function
 
 
-from .version import __version__
 from . import spectrum_peak
 from . import bw_finder
 from . import peak_det
