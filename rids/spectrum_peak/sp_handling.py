@@ -12,6 +12,8 @@ This has various modules to handle and view ridz files.
 from __future__ import print_function, absolute_import, division
 from . import spectrum_peak
 from argparse import Namespace
+import numpy as np
+import matplotlib.pyplot as plt
 
 
 class SPHandling:
@@ -99,6 +101,28 @@ class SPHandling:
         if self.rfpar is None or reset_params:
             self.rfpar = self.reconstitute_params(rid=rid, feature_key=feature_key,
                                                   feature_component=feature_component, **param)
+        print(feature_key)
+        if 'data' in feature_key:
+            spectrum_peak.spectrum_plotter('1', True, rid.feature_sets[feature_key].freq, data, None, 'k', '-', plt)
+#            plt.plot(rid.feature_sets[feature_key].freq, data)
+            return
+        freq = np.arange(self.rfpar.fmin, self.rfpar.fmax, self.rfpar.fstep)
+
+        spec = []
+        for f in freq:
+            val = 0.0
+            num = 0
+            for s, v, bw in zip(rid.feature_sets[feature_key].freq, data, rid.feature_sets[feature_key].bw):
+                if f >= s + bw[0] and f < s + bw[1]:
+                    val += v
+                    num += 1
+            if num:
+                spec.append(val / num)
+            else:
+                spec.append(self.rfpar.dfill)
+        plt.plot(rid.feature_sets[feature_key].freq, data, 'o')
+        plt.plot(freq, spec)
+        plt.show()
 
     def reconstitute_waterfall(self, start_time, stop_time):
         """
