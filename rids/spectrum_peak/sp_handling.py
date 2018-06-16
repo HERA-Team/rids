@@ -99,22 +99,22 @@ class SPHandling:
         """
         try:
             data = getattr(rid.feature_sets[feature_key], feature_component)
+            freq = rid.feature_sets[feature_key].freq
         except AttributeError:
             print("{} not in set {}".format(feature_component, feature_key))
         if self.rfpar is None or reset_params:
             self.rfpar = self.reconstitute_params(rid=rid, feature_key=feature_key,
                                                   feature_component=feature_component, **param)
         if 'data' in feature_key:
-            spectrum_peak.spectrum_plotter('1', True, rid.feature_sets[feature_key].freq, data, None, 'k', '-', plt)
-#            plt.plot(rid.feature_sets[feature_key].freq, data)
+            spectrum_peak.spectrum_plotter(feature_key, True, freq, data, None, 'k', '-')
             return
-        freq = np.arange(self.rfpar.fmin, self.rfpar.fmax, self.rfpar.fstep)
+        refreq = np.arange(self.rfpar.fmin, self.rfpar.fmax, self.rfpar.fstep)
 
         spec = []
-        for f in freq:
+        for f in refreq:
             val = 0.0
             num = 0
-            for s, v, bw in zip(rid.feature_sets[feature_key].freq, data, rid.feature_sets[feature_key].bw):
+            for s, v, bw in zip(freq, data, rid.feature_sets[feature_key].bw):
                 if f >= s + bw[0] and f < s + bw[1]:
                     val += v
                     num += 1
@@ -122,9 +122,9 @@ class SPHandling:
                 spec.append(val / num)
             else:
                 spec.append(self.rfpar.dfill)
-        plt.figure('1')
-        plt.plot(rid.feature_sets[feature_key].freq, data, 'o')
-        plt.plot(freq, spec)
+        plt.figure(feature_key)
+        plt.plot(freq, data, 'o')
+        plt.plot(refreq, spec)
         plt.show()
 
     def reconstitute_waterfall(self, start_time, stop_time):

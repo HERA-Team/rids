@@ -9,6 +9,7 @@ This module defines the format of the Spectrum_Peak feature_sets.
 from __future__ import print_function, absolute_import, division
 import os
 import numpy as np
+import matplotlib.pyplot as plt
 from rids import rids
 # import peaks  # Scipy option
 import peak_det  # Another option...
@@ -172,7 +173,6 @@ class SpectrumPeak:
     def peak_viewer(self):
         if self.hipk is None:
             return
-        import matplotlib.pyplot as plt
         plt.plot(self.hipk_freq, self.hipk_val)
         plt.plot(np.array(self.hipk_freq)[self.hipk], np.array(self.hipk_val)[self.hipk], 'kv')
         if self.hipk_bw is not None:
@@ -194,7 +194,7 @@ class SpectrumPeak:
         show_components:  event_components to show (list) or 'all'
         show_data:  include data spectra (Boolean)
         """
-        import matplotlib.pyplot as plt
+
         import collections
         if threshold is not None and threshold < self.threshold:
             print("Below threshold - using {}".format(self.threshold))
@@ -226,7 +226,7 @@ class SpectrumPeak:
             for fc in show_components:
                 try:
                     i = show_components.index(fc)
-                    spectrum_plotter(self.rids.rid_file, is_data, v.freq, getattr(v, fc), fmt[i], clr[i], ls[i], plt)
+                    spectrum_plotter(self.rids.rid_file, is_data, v.freq, getattr(v, fc), fmt[i], clr[i], ls[i])
                 except AttributeError:
                     pass
             if is_data:
@@ -397,7 +397,7 @@ def spectrum_reader(filename, spec, polarization=None):
             spec.val.append(data[1])
 
 
-def spectrum_plotter(figure_name, is_data, x, y, fmt, clr, ls, plt):
+def spectrum_plotter(figure_name, is_data, x, y, fmt, clr, ls):
     if not len(x) or not len(y):
         return
     try:
