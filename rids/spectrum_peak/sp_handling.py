@@ -63,7 +63,10 @@ class SPHandling:
             elif rfpar.dfill == 'feature_set_min':
                 rfpar.dfill = 1E9
                 for mf in rid.feature_sets[feature_key].measured_spectral_fields:
-                    v = min(getattr(rid.feature_sets[feature_key], mf))
+                    try:
+                        v = min(getattr(rid.feature_sets[feature_key], mf))
+                    except AttributeError:
+                        continue
                     if v < rfpar.dfill:
                         rfpar.dfill = v
             else:
@@ -101,7 +104,6 @@ class SPHandling:
         if self.rfpar is None or reset_params:
             self.rfpar = self.reconstitute_params(rid=rid, feature_key=feature_key,
                                                   feature_component=feature_component, **param)
-        print(feature_key)
         if 'data' in feature_key:
             spectrum_peak.spectrum_plotter('1', True, rid.feature_sets[feature_key].freq, data, None, 'k', '-', plt)
 #            plt.plot(rid.feature_sets[feature_key].freq, data)
@@ -120,6 +122,7 @@ class SPHandling:
                 spec.append(val / num)
             else:
                 spec.append(self.rfpar.dfill)
+        plt.figure('1')
         plt.plot(rid.feature_sets[feature_key].freq, data, 'o')
         plt.plot(freq, spec)
         plt.show()

@@ -40,5 +40,3 @@ def test_reconstitute_features():
     fc2use = 'maxhold'
     rcf.reconstitute_features(rid.rids, fs, fc2use, reset_params=False)
     print(rcf.rfpar)
-    #rcf.reconstitute_features(rid.rids, fs, fc2use, reset_params=True, dfill='maxhold')
-    #print(rcf.rfpar)
