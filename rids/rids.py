@@ -11,9 +11,10 @@ class Rids:
     RF Interference Data System (RIDS)
     Reads/writes .ridm/.ridz files, JSON files with fields as described below.  This is the building
     block and should read any rids file.  If feature_module is None it ignores features.
-        and in feature module
+    Timestamps should be sortable to increasing time (can fix this later if desired...).
+
     Any field may be omitted or missing.
-      - This first set is metadata - typically stored in a .ridm file that gets read/rewritten
+      - This first set is metadata - typically stored in a .ridm file that gets read
             ident: description of filename
             instrument:  description of the instrument used
             receiver:  description of receiver used
@@ -30,8 +31,8 @@ class Rids:
       - These are typically set in data-taking session
             rid_file:  records what it thinks the ridz filename should be
             nsets:  number of feature_sets included in file
-            timestamp_first:  timestamp for first feature_set
-            timestamp_last:           "      last          "
+            timestamp_first:  timestamp for first feature_set (currently assumes timestamps sort)
+            timestamp_last:           "     last          "                 "
             feature_module_name:  name of the feature module used
             feature_sets:  features etc defined in the feature module
     """
@@ -76,7 +77,6 @@ class Rids:
         self.__init__(self.feature_module_for_reset)
 
     def get_datetime_from_timestamp(self, ts):
-        import datetime
         if self.time_format.lower() == 'julian':
             from astropy.time import Time
             if isinstance(ts, (str, unicode)):
@@ -84,6 +84,7 @@ class Rids:
             dt = Time(ts, format='jd', scale='utc')
             return dt.datetime
         elif '%' in self.time_format:
+            import datetime
             try:
                 return datetime.datetime.strptime(ts, str(self.time_format))
             except ValueError:

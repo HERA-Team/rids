@@ -13,7 +13,7 @@ ap = argparse.ArgumentParser()
 ap.add_argument('parameters', help="parameter/header json filename", default=None)
 ap.add_argument('-e', '--ecal', help="E-pol cal filename", default=None)
 ap.add_argument('-n', '--ncal', help="N-pol cal filename", default=None)
-ap.add_argument('-#', '--nsets', help="number of sets per pol per file", default=100)
+ap.add_argument('-#', '--sets_per_pol', help="number of sets per pol per file", default=100)
 ap.add_argument('-i', '--ident', help="can be a specific ident or 'all'", default='all')
 ap.add_argument('-c', '--comment', help="append a comment", default=None)
 ap.add_argument('-^', '--peak_on', help="Peak on event component (if other than default)", default=None)
@@ -28,7 +28,7 @@ ap.add_argument('--max_loops', help="maximum number of iteration loops", default
 
 args = ap.parse_args()
 args.max_loops = int(args.max_loops)
-args.nsets = int(args.nsets)
+args.sets_per_pol = int(args.sets_per_pol)
 if args.view:
     if args.rawdata[0].lower() == 'n':
         args.rawdata = False
@@ -36,8 +36,8 @@ if args.view:
         args.rawdata = True
 elif args.rawdata[0] == '+':
     step = int(args.rawdata[1:])
-    args.rawdata = range(0, args.nsets, step)
-    if (args.nsets - args.rawdata[-1]) >= step:
+    args.rawdata = range(0, args.sets_per_pol, step)
+    if (args.sets_per_pol - args.rawdata[-1]) >= step:
         args.rawdata.append(-1)
 else:
     a = args.rawdata.split(',')
@@ -66,4 +66,4 @@ if __name__ == '__main__':
             r.read_cal(args.ecal, 'E')
         if args.ncal is not None:
             r.read_cal(args.ncal, 'N')
-        r.process_files(args.directory, args.ident, args.rawdata, args.peak_on, args.nsets, args.max_loops)
+        r.process_files(args.directory, args.ident, args.rawdata, args.peak_on, args.sets_per_pol, args.max_loops)

@@ -106,8 +106,8 @@ class SPHandling:
             self.rfpar = self.reconstitute_params(rid=rid, feature_key=feature_key,
                                                   feature_component=feature_component, **param)
         if 'data' in feature_key:
-            spectrum_peak.spectrum_plotter(feature_key, True, freq, data, None, 'k', '-')
-            return
+            f, v = spectrum_peak.spectrum_plotter(feature_key, True, freq, data, None, 'k', '-', True)
+            return f, v
         refreq = np.arange(self.rfpar.fmin, self.rfpar.fmax, self.rfpar.fstep)
 
         spec = []

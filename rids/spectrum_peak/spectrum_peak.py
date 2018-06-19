@@ -18,7 +18,9 @@ import bw_finder
 
 class Spectral:
     """
-    For now, the order matters since used to order peak finding priority
+    Generic spectral class, with the 'basics' initialized.  The other fields may get added
+    as appropriate.
+    For now, the order matters for 'spectral_fields' since used to order peak finding priority
     """
     spectral_fields = ['maxhold', 'minhold', 'val', 'comment', 'polarization', 'freq', 'bw']
     measured_spectral_fields = ['maxhold', 'minhold', 'val']
@@ -32,23 +34,24 @@ class Spectral:
 
 class SpectrumPeak:
     """
+    Feature module:
     This feature module searches a directory for spectrum files and saves feature sets based
     peak finding (or saves rawdata).
 
     The feature_module_name is "Spectrum_Peak"
 
     Direct attributes are:
-        comment:
+        comment:  generic comments
         peaked_on:  event_component on which peaks were found
-        delta:
-        bw_range:
-        delta_values:
+        delta:  delta value used in the peak-finding routine
+        bw_range:  +/- bw_range (list) that gets searched over (and is then max)
+        delta_values:  a dictionary with some default values
     Unit attributes are:
         threshold:  value used to threshold peaks
         threshold_unit: unit of threshold
-        vbw:
+        vbw:  if spectrum analyzer, video bandwidth
         vbw_unit:
-        rbw:
+        rbw:  if spectrum analyzer, resolution bandwidth (probably channel_width)
         rbw_unit:
     """
     direct_attributes = ['comment', 'peaked_on', 'delta', 'bw_range', 'delta_values', 'fmin', 'fmax']
@@ -256,7 +259,7 @@ class SpectrumPeak:
         plt.show()
 
     def read_cal(self, filename, polarization):
-        tag = 'cal.' + filename + '_'
+        tag = 'cal.' + filename + '.'
         self.get_feature_sets(tag, polarization, val=filename)
 
     def apply_cal(self):
@@ -265,7 +268,10 @@ class SpectrumPeak:
     def process_files(self, directory='.', ident='all', data=[0, -1], peak_on=False, sets_per_pol=100, max_loops=1000):
         """
         This is the standard method to process spectrum files in a directory to
-        produce ridz files.
+        produce ridz files.  The module has an "outer loop" that is meant to handle
+        ongoing file-writing along with file reading.  It will quit when either it
+        has run out of appropriate files or the max_loops has been exceeded (unlikely
+        but just in case)
 
         Format of the spectrum filename (peel_filename below):
         <path>/identifier.time-stamp.feature_component.polarization
@@ -275,7 +281,7 @@ class SpectrumPeak:
         directory:  directory where files reside and ridz files get written
         idents:  idents to do.  If 'all' processes all, picking first for overall ident
         data:  indices of events to be saved as data spectra
-        sets_per_pol:  number of events (see event_components) per pol per ridz file
+        sets_per_pol:  number of feature_sets per pol per ridz file
         max_loops:  will stop after this number
         """
         loop = True
@@ -307,13 +313,14 @@ class SpectrumPeak:
                         fnd['polarization'] not in self.polarizations or\
                         fnd['feature_component'] not in self.feature_components:
                     continue
+                pol = fnd['polarization']
+                feco = fnd['feature_component']
                 if ident == 'all' or ident == fnd['ident']:
                     loop = True
-                    file_list = ftrfiles[fnd['polarization']][fnd['feature_component']]
-                    if len(file_list) > sets_per_pol:
+                    if len(ftrfiles[pol][feco]) > sets_per_pol:
                         continue
                     file_times.append(fnd['timestamp'])
-                    file_list.append(os.path.join(directory, af))
+                    ftrfiles[pol][feco].append(os.path.join(directory, af))
                     if self.rids.ident is None:
                         self.rids.ident = fnd['ident']
             if self.rids.ident not in self.delta_values:
@@ -332,7 +339,7 @@ class SpectrumPeak:
                     diff_len = max_pol_cnt[pol] - len(ftrfiles[pol][fc])
                     if diff_len > 0:
                         ftrfiles[pol][fc] = ftrfiles[pol][fc] + [None] * diff_len
-                    num_to_read[pol] = len(ftrfiles[pol][fc])  # Yes, does get reset
+                    num_to_read[pol] = len(ftrfiles[pol][fc])  # Yes, does get reset many times
             file_times = sorted(file_times)
             self.rids.timestamp_first = file_times[0]
             self.rids.timestamp_last = file_times[-1]
@@ -353,20 +360,20 @@ class SpectrumPeak:
                         bld[fc] = fcfns[i]
                     if not len(bld):
                         break
-                    fvn = 'data.{}.'.format(fnd['timestamp'])
-                    self.get_feature_sets(fvn, pol, **bld)
+                    feature_tag = 'data.{}.'.format(fnd['timestamp'])
+                    self.get_feature_sets(feature_tag, pol, **bld)
                 # Get the feature_sets
                 for i in range(num_to_read[pol]):
                     fcd = {}
                     for fc, fcfns in ftrfiles[pol].iteritems():
                         fnd = peel_filename(fcfns[i], self.feature_components)
                         if 'timestamp' in fnd:
-                            fnd_ts = fnd['timestamp'] + '.'
+                            feature_tag = fnd['timestamp'] + '.'
                         if len(fnd):
                             fcd[fc] = fcfns[i]
                     if not len(fcd):
                         continue
-                    self.get_feature_sets(fnd_ts, pol, peak_on=peak_on, **fcd)
+                    self.get_feature_sets(feature_tag, pol, peak_on=peak_on, **fcd)
                     for x in fcd.itervalues():
                         if x is not None:
                             os.remove(x)
@@ -397,22 +404,22 @@ def spectrum_reader(filename, spec, polarization=None):
             spec.val.append(data[1])
 
 
-def spectrum_plotter(figure_name, is_data, x, y, fmt, clr, ls):
+def spectrum_plotter(figure_name, is_data, x, y, fmt, clr, ls, ret_xy=False):
     if not len(x) or not len(y):
         return
     try:
-        plt.figure(figure_name)
         _X = x[:len(y)]
-        if is_data:
-            plt.plot(_X, y, clr, linestyle=ls)
-        else:
-            plt.plot(_X, y, fmt, color=clr)
+        _Y = y[:]
     except ValueError:
+        _X = x[:]
         _Y = y[:len(x)]
-        if is_data:
-            plt.plot(x, _Y, clr, linestyle=ls)
-        else:
-            plt.plot(x, _Y, fmt, color=clr)
+    plt.figure(figure_name)
+    if is_data:
+        plt.plot(_X, _Y, clr, linestyle=ls)
+    else:
+        plt.plot(_X, _Y, fmt, color=clr)
+    if ret_xy:
+        return _X, _Y
 
 
 def peel_filename(v, fclist=None):

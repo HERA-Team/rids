@@ -10,7 +10,7 @@ from rids import spectrum_peak as sp
 def test_reconstitute_params():
     rid = sp.spectrum_peak.SpectrumPeak()
     rid.reader('sa_Spectrum_Peak.20180526-1033.n40.maxT-20.ridz')
-    fs = '20180527-0116E'
+    fs = '20180527-0116.E'
     rcf = sp.sp_handling.SPHandling()
     fc2use = 'maxhold'
 
@@ -35,7 +35,7 @@ def test_reconstitute_params():
 def test_reconstitute_features():
     rid = sp.spectrum_peak.SpectrumPeak()
     rid.reader('sa_Spectrum_Peak.20180526-1033.n40.maxT-20.ridz')
-    fs = '20180527-0116E'
+    fs = '20180527-0116.E'
     rcf = sp.sp_handling.SPHandling()
     fc2use = 'maxhold'
     rcf.reconstitute_features(rid.rids, fs, fc2use, reset_params=False)
