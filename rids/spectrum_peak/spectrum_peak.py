@@ -2,8 +2,8 @@
 # Copy 2018 the HERA Project
 # Licensed under the 2-clause BSD license
 
-"""Feature module:  Spectrum_Peak
-This module defines the format of the Spectrum_Peak feature_sets.
+"""Feature module:  SpectrumPeak
+This module defines the format of the SpectrumPeak feature_sets.
 """
 
 from __future__ import print_function, absolute_import, division
@@ -38,7 +38,7 @@ class SpectrumPeak:
     This feature module searches a directory for spectrum files and saves feature sets based
     peak finding (or saves rawdata).
 
-    The feature_module_name is "Spectrum_Peak"
+    The feature_module_name is "SpectrumPeak"
 
     Direct attributes are:
         comment:  generic comments
@@ -56,7 +56,7 @@ class SpectrumPeak:
     """
     direct_attributes = ['comment', 'peaked_on', 'delta', 'bw_range', 'delta_values', 'fmin', 'fmax']
     unit_attributes = ['threshold', 'rbw', 'vbw']
-    feature_module_name = 'Spectrum_Peak'
+    feature_module_name = 'SpectrumPeak'
     polarizations = ['E', 'N', 'I']
 
     def __init__(self, comment='', view_ongoing=False):
