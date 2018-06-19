@@ -25,6 +25,6 @@ Any field may be omitted or missing.
   * feature_module_name:  name of the feature module used
   * feature_sets:  features etc defined in the feature module
 
-# Current feature_modules:
+## Current feature_modules:
 
-SpectrumPeak
+* SpectrumPeak
