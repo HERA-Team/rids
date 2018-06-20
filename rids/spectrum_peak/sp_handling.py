@@ -152,5 +152,5 @@ class SPHandling:
 
     def raw_data_waterfall(self, start_time, stop_time):
         """
-        Give a date range to make a waterfall with whatever raw data is in
+        Give a date range to make a waterfall with whatever raw data is in the file(s)
         """
