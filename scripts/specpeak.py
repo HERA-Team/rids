@@ -21,12 +21,17 @@ ap.add_argument('-r', '--rawdata', help="csv indices for raw data to keep, or +s
 ap.add_argument('-s', '--show_info', help="show the info for provided filename", action="store_true")
 ap.add_argument('-v', '--view', help="show plot for provided filename", action="store_true")
 ap.add_argument('-f', '--show_fc', help="csv list of event components to show (if different)", default='all')
-ap.add_argument('--view_peaks_ongoing', help="view all peaks in process (diagnostic)", action="store_true")
+ap.add_argument('--view_peaks_ongoing', help="view all peaks in process (diagnostic only!)", action="store_true")
 ap.add_argument('--directory', help="directory for process files and where parameter file lives", default='.')
 ap.add_argument('--threshold_view', help="new threshold for viewing (if possible)", default=None)
 ap.add_argument('--max_loops', help="maximum number of iteration loops", default=1000)
+ap.add_argument('--data_only', help="flag to only store data and not peaks", action='store_true')
+ap.add_argument('--data_only_override', help="flag to force data_only without saving all", action='store_true')
 
 args = ap.parse_args()
+if args.data_only and args.rawdata != '+1' and not args.data_only_override:
+    print("Warning:  This will delete the data but not save all of the raw data.")
+    raise ValueError("If this is desired then rerun with flag --data_only_override")
 args.max_loops = int(args.max_loops)
 args.sets_per_pol = int(args.sets_per_pol)
 if args.view:
@@ -66,4 +71,10 @@ if __name__ == '__main__':
             r.read_cal(args.ecal, 'E')
         if args.ncal is not None:
             r.read_cal(args.ncal, 'N')
-        r.process_files(args.directory, args.ident, args.rawdata, args.peak_on, args.sets_per_pol, args.max_loops)
+        r.process_files(directory=args.directory,
+                        ident=args.ident,
+                        data=args.rawdata,
+                        peak_on=args.peak_on,
+                        data_only=args.data_only,
+                        sets_per_pol=args.sets_per_pol,
+                        max_loops=args.max_loops)

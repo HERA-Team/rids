@@ -112,7 +112,6 @@ class Rids:
             r_open = open
         with r_open(filename, 'rb') as f:
             data = json.load(f)
-        self.nsets = 0
         for d, val in data.iteritems():
             if d == 'comment':
                 self.append_comment(val)
@@ -124,12 +123,11 @@ class Rids:
                 set_unit_values(self, d, val)
             elif d in self.features.unit_attributes:
                 set_unit_values(self.features, d, val)
-            elif d == 'feature_sets' or d == 'events':
+            elif d == 'feature_sets':
                 if self.features.read_feature_set_dict is None:
                     continue
                 for k, fs in val.iteritems():
                     self.feature_sets[k] = self.features.read_feature_set_dict(fs)
-                    self.nsets += 1
 
     def writer(self, filename, fix_list=True):
         """
@@ -184,8 +182,6 @@ class Rids:
         if self.comment is None:
             self.comment = comment
         else:
-            print("RRW183:  ", comment)
-            print("         ", self.comment)
             self.comment += ('\n' + comment)
 
     def info(self):
@@ -198,7 +194,8 @@ class Rids:
             print("\tfeatures.{}:  {}".format(d, getattr(self.features, d)))
         for d in self.features.unit_attributes:
             print("\tfeatures.{}:  {} {}".format(d, getattr(self.features, d), getattr(self.features, d + '_unit')))
-        print("\t{} feature_sets".format(len(self.feature_sets)))
+        if self.nsets != len(self.feature_sets):
+            print("Note that the stated nsets={} does not match the found nsets={}".format(self.nsets, len(self.feature_sets)))
 
 
 def set_unit_values(C, d, x):

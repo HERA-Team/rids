@@ -6,7 +6,7 @@
 """
 SPHandle:  Spectrum_Peak Handling
 
-This has various modules to handle and view ridz files.
+This has various modules to handle and view ridz files with the SpectrumPeak feature module.
 
 """
 from __future__ import print_function, absolute_import, division
@@ -20,18 +20,19 @@ class SPHandling:
 
     def __init__(self):
         self.sp = spectrum_peak.SpectrumPeak()
-        self.rfpar = None
+        self.reconstituted_info = None
 
     def reconstitute_params(self, rid, feature_key, feature_component, **param):
         """
         From a peak feature_set, get parameters for reconstituting a spectrum (imperfect, just use bw).
+        This populates a 'reconstituted_info' Namespace with the relavent information
 
         Parameters:
         ------------
         rid:  the object containing the feature_set
         feature_key:  key of feature set
         feature_component:  feature_component to reconstitute
-        data:  reconstitute feature parameters "rfpar" (changes from default)
+        data:  reconstitute feature parameters "self.reconstituted_info" (changes from default)
             fmin/fmax:  min/max frequencies [from ridz file]
             fstep:  'channel' uses the channel_width
                     value:  use this value
@@ -46,48 +47,52 @@ class SPHandling:
         except AttributeError:
             print("{} not in set {}".format(feature_component, feature_key))
         # Set parameters
-        rfpar = Namespace()
+        self.reconstituted_info = Namespace()
+        self.reconstituted_info.feature_key = feature_key
+        self.reconstituted_info.feature_component = feature_component
+        self.reconstituted_info.rid = rid
         # ...defaults
-        rfpar.fstep = 'channel'
-        rfpar.dfill = 'feature_set_min'
+        self.reconstituted_info.fstep = 'channel'
+        self.reconstituted_info.dfill = 'component_min'
         for x in ['fmin', 'fmax']:
-            setattr(rfpar, x, getattr(rid.features, x))
+            setattr(self.reconstituted_info, x, getattr(rid.features, x))
         # ...final values
         for x in param:
-            setattr(rfpar, x, param[x])
-        if isinstance(rfpar.dfill, (str, unicode)):
-            if rfpar.dfill == 'component_min':
-                rfpar.dfill = min(data)
-            elif rfpar.dfill in self.sp.feature_components:
-                rfpar.dfill = min(getattr(rid.feature_sets[feature_key], rfpar.dfill))
-            elif rfpar.dfill == 'feature_set_min':
-                rfpar.dfill = 1E9
+            setattr(self.reconstituted_info, x, param[x])
+        if isinstance(self.reconstituted_info.dfill, (str, unicode)):
+            if self.reconstituted_info.dfill == 'component_min':
+                self.reconstituted_info.dfill = min(data)
+            elif self.reconstituted_info.dfill in self.sp.feature_components:
+                self.reconstituted_info.dfill = min(getattr(rid.feature_sets[feature_key],
+                                                            self.reconstituted_info.dfill))
+            elif self.reconstituted_info.dfill == 'feature_set_min':
+                self.reconstituted_info.dfill = 1E9
                 for mf in rid.feature_sets[feature_key].measured_spectral_fields:
                     try:
                         v = min(getattr(rid.feature_sets[feature_key], mf))
                     except AttributeError:
                         continue
-                    if v < rfpar.dfill:
-                        rfpar.dfill = v
+                    if v < self.reconstituted_info.dfill:
+                        self.reconstituted_info.dfill = v
             else:
-                rfpar.dfill = float(rfpar.dfill)
-        if isinstance(rfpar.fstep, (str, unicode)):
-            if rfpar.fstep == 'channel':
-                rfpar.fstep = rid.channel_width
+                self.reconstituted_info.dfill = float(self.reconstituted_info.dfill)
+        if isinstance(self.reconstituted_info.fstep, (str, unicode)):
+            if self.reconstituted_info.fstep == 'channel':
+                self.reconstituted_info.fstep = rid.channel_width
             else:
-                rfpar.fstep = float(rfpar.fstep)
-        return rfpar
+                self.reconstituted_info.fstep = float(self.reconstituted_info.fstep)
 
-    def reconstitute_features(self, rid, feature_key, feature_component, reset_params=False, **param):
+    def reconstitute_features(self, rid, feature_key, feature_component, **param):
         """
         From a peak feature_set, reconstitute a spectrum (imperfect, just use bw).
+        This finishes populating the 'reconstituted_info' Namespace
 
         Parameters:
         ------------
         rid:  the object containing the feature_set
         feature_key:  key of feature set
         feature_component:  feature_component to reconstitute
-        data:  reconstitute feature parameters "rfpar" (changes from default)
+        data:  reconstitute feature parameters "self.reconstituted_info" (changes from default)
             fmin/fmax:  min/max frequencies [from ridz file]
             fstep:  'channel' uses the channel_width
                     value:  use this value
@@ -102,16 +107,18 @@ class SPHandling:
             freq = rid.feature_sets[feature_key].freq
         except AttributeError:
             print("{} not in set {}".format(feature_component, feature_key))
-        if self.rfpar is None or reset_params:
-            self.rfpar = self.reconstitute_params(rid=rid, feature_key=feature_key,
-                                                  feature_component=feature_component, **param)
-        if 'data' in feature_key:
-            f, v = spectrum_peak.spectrum_plotter(feature_key, True, freq, data, None, 'k', '-', True)
-            return f, v
-        refreq = np.arange(self.rfpar.fmin, self.rfpar.fmax, self.rfpar.fstep)
+        self.reconstitute_params(rid=rid, feature_key=feature_key,
+                                 feature_component=feature_component, **param)
+        if spectrum_peak.is_spectrum(feature_key):
+            self.reconstituted_info.freq, self.reconstituted_info.spec =\
+                spectrum_peak.spectrum_plotter(feature_key, True, freq, data, None, 'k', '-', True)
+            return
 
-        spec = []
-        for f in refreq:
+        self.reconstituted_info.freq = np.arange(self.reconstituted_info.fmin,
+                                                 self.reconstituted_info.fmax,
+                                                 self.reconstituted_info.fstep)
+        self.reconstituted_info.spec = []
+        for f in self.reconstituted_info.freq:
             val = 0.0
             num = 0
             for s, v, bw in zip(freq, data, rid.feature_sets[feature_key].bw):
@@ -119,13 +126,24 @@ class SPHandling:
                     val += v
                     num += 1
             if num:
-                spec.append(val / num)
+                self.reconstituted_info.spec.append(val / num)
             else:
-                spec.append(self.rfpar.dfill)
-        plt.figure(feature_key)
-        plt.plot(freq, data, 'o')
-        plt.plot(refreq, spec)
-        plt.show()
+                self.reconstituted_info.spec.append(self.reconstituted_info.dfill)
+
+    def reconstitute_plot(self, figname=None, ptype='all'):
+        if not self.reconstituted_info.spec:
+            print("Need to generate a reconstituted spectrum")
+            return
+        if figname is None:
+            print(figname)
+            figname = self.reconstituted_info.feature_key
+        plt.figure(figname)
+        if ptype in ['all', 'spec']:
+            plt.plot(self.reconstituted_info.freq, self.reconstituted_info.spec)
+        if ptype in ['all', 'points']:
+            recon_fk = self.reconstituted_info.rid.feature_sets[self.reconstituted_info.feature_key]
+            spec = getattr(recon_fk, self.reconstituted_info.feature_component)
+            plt.plot(recon_fk.freq, spec, 'o')
 
     def reconstitute_waterfall(self, start_time, stop_time):
         """

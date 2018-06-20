@@ -12,7 +12,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from rids import rids
 # import peaks  # Scipy option
-import peak_det  # Another option...
+import peak_det  # Another option that seems to do better.
 import bw_finder
 
 
@@ -30,6 +30,10 @@ class Spectral:
         self.polarization = polarization
         self.freq = []
         self.val = []
+
+
+def is_spectrum(tag):
+    return 'data' in tag.lower() or 'cal' in tag.lower() or 'baseline' in tag.lower()
 
 
 class SpectrumPeak:
@@ -106,7 +110,6 @@ class SpectrumPeak:
         **fnargs are filenames for self.feature_components {"feature_component": <filename>}
         """
         fset_name = fset_tag + polarization
-        is_spectrum = 'data' in fset_tag.lower() or 'cal' in fset_tag.lower()
         self.rids.feature_sets[fset_name] = Spectral(polarization=polarization)
         self.rids.feature_sets[fset_name].freq = []
         spectra = {}
@@ -115,12 +118,12 @@ class SpectrumPeak:
                 continue
             spectra[fc] = Spectral()
             spectrum_reader(sfn, spectra[fc], polarization)
-            if is_spectrum:
+            if is_spectrum(fset_tag):
                 if len(spectra[fc].freq) > len(self.rids.feature_sets[fset_name].freq):
                     self.rids.feature_sets[fset_name].freq = spectra[fc].freq
                 setattr(self.rids.feature_sets[fset_name], fc, spectra[fc].val)
         self.rids.nsets += 1
-        if is_spectrum:
+        if is_spectrum(fset_tag):
             return
 
         # Get the feature_component to use and find peaks/bw
@@ -213,10 +216,9 @@ class SpectrumPeak:
         c = 0
         bl = 0
         for f, v in self.rids.feature_sets.iteritems():
-            is_data = 'data' in f.lower() or 'cal' in f.lower() or 'baseline' in f.lower()
-            if is_data and not show_data:
+            if is_spectrum(f) and not show_data:
                 continue
-            if is_data:
+            if is_spectrum(f):
                 clr = [fc_list[x][0] for x in show_components]
                 ls = [line_list[bl % len(line_list)]] * len(show_components)
                 fmt = [None] * len(show_components)
@@ -229,10 +231,10 @@ class SpectrumPeak:
             for fc in show_components:
                 try:
                     i = show_components.index(fc)
-                    spectrum_plotter(self.rids.rid_file, is_data, v.freq, getattr(v, fc), fmt[i], clr[i], ls[i])
+                    spectrum_plotter(self.rids.rid_file, is_spectrum(f), v.freq, getattr(v, fc), fmt[i], clr[i], ls[i])
                 except AttributeError:
                     pass
-            if is_data:
+            if is_spectrum(f):
                 continue
             # Now plot bandwidth
             try:
@@ -265,7 +267,8 @@ class SpectrumPeak:
     def apply_cal(self):
         print("NOT IMPLEMENTED YET: Apply the calibration, if available.")
 
-    def process_files(self, directory='.', ident='all', data=[0, -1], peak_on=False, sets_per_pol=100, max_loops=1000):
+    def process_files(self, directory='.', ident='all', data=[0, -1], peak_on=None,
+                      data_only=False, sets_per_pol=100, max_loops=1000):
         """
         This is the standard method to process spectrum files in a directory to
         produce ridz files.  The module has an "outer loop" that is meant to handle
@@ -281,6 +284,8 @@ class SpectrumPeak:
         directory:  directory where files reside and ridz files get written
         idents:  idents to do.  If 'all' processes all, picking first for overall ident
         data:  indices of events to be saved as data spectra
+        peak_on:  feature_component on which to find peaks, default order if None
+        data_only:  flag if only saving data and not peaks
         sets_per_pol:  number of feature_sets per pol per ridz file
         max_loops:  will stop after this number
         """
@@ -349,7 +354,7 @@ class SpectrumPeak:
             for pol in self.polarizations:
                 if not max_pol_cnt[pol]:
                     continue
-                self.rids.nsets += 1
+                processed_pol_data = []
                 # Get the data spectrum files
                 for i in data:
                     bld = {}
@@ -362,7 +367,7 @@ class SpectrumPeak:
                         break
                     feature_tag = 'data.{}.'.format(fnd['timestamp'])
                     self.get_feature_sets(feature_tag, pol, **bld)
-                # Get the feature_sets
+                # Get the feature_sets, write unless data_only and remove processed files
                 for i in range(num_to_read[pol]):
                     fcd = {}
                     for fc, fcfns in ftrfiles[pol].iteritems():
@@ -373,7 +378,9 @@ class SpectrumPeak:
                             fcd[fc] = fcfns[i]
                     if not len(fcd):
                         continue
-                    self.get_feature_sets(feature_tag, pol, peak_on=peak_on, **fcd)
+                    if not data_only:
+                        self.get_feature_sets(feature_tag, pol, peak_on=peak_on, **fcd)
+                    # Delete processed files
                     for x in fcd.itervalues():
                         if x is not None:
                             os.remove(x)
@@ -381,10 +388,15 @@ class SpectrumPeak:
             th = self.threshold
             if abs(self.threshold) < 1.0:
                 th *= 100.0
-            pk = self.peaked_on[:3]
-            fn = "{}_{}.{}.n{}.{}T{:.0f}.ridz".format(self.rids.ident, self.feature_module_name,
-                                                      self.rids.timestamp_first, self.rids.nsets,
-                                                      pk, th)
+            th = 'T{:.0f}'.format(th)
+            if self.peaked_on is not None:
+                pk = self.peaked_on[:3]
+            else:
+                pk = 'None'
+                th = ''
+            fn = "{}_{}.{}.n{}.{}{}.ridz".format(self.rids.ident, self.feature_module_name,
+                                                 self.rids.timestamp_first, self.rids.nsets,
+                                                 pk, th)
             self.filename = os.path.join(directory, fn)
             self.rids.writer(self.filename)
 
@@ -404,7 +416,7 @@ def spectrum_reader(filename, spec, polarization=None):
             spec.val.append(data[1])
 
 
-def spectrum_plotter(figure_name, is_data, x, y, fmt, clr, ls, ret_xy=False):
+def spectrum_plotter(figure_name, is_spectrum, x, y, fmt, clr, ls, ret_xy=False):
     if not len(x) or not len(y):
         return
     try:
@@ -413,13 +425,14 @@ def spectrum_plotter(figure_name, is_data, x, y, fmt, clr, ls, ret_xy=False):
     except ValueError:
         _X = x[:]
         _Y = y[:len(x)]
+    if ret_xy:
+        return _X, _Y
+
     plt.figure(figure_name)
-    if is_data:
+    if is_spectrum:
         plt.plot(_X, _Y, clr, linestyle=ls)
     else:
         plt.plot(_X, _Y, fmt, color=clr)
-    if ret_xy:
-        return _X, _Y
 
 
 def peel_filename(v, fclist=None):
