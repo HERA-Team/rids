@@ -58,9 +58,8 @@ class SpectrumPeak(rids.Rids):
         rbw:  if spectrum analyzer, resolution bandwidth (probably channel_width)
         rbw_unit:
     """
-    sp__direct_attributes = ['peaked_on', 'delta', 'bw_range', 'delta_values', 'fmin', 'fmax']
+    sp__direct_attributes = ['peaked_on', 'delta', 'bw_range', 'delta_values', 'fmin', 'fmax', 'feature_module_name']
     sp__unit_attributes = ['threshold', 'rbw', 'vbw']
-    feature_module_name = 'SpectrumPeak'
     polarizations = ['E', 'N', 'I']
 
     def __init__(self, comment='', view_ongoing=False):
@@ -75,6 +74,7 @@ class SpectrumPeak(rids.Rids):
             setattr(self, d + '_unit', None)
 
         # Re-initialize attributes
+        self.feature_module_name = 'SpectrumPeak'
         self.bw_range = []  # Range to search for bandwidth
         self.delta_values = {'zen': 0.1, 'sa': 1.0}
         self.feature_sets = {}
@@ -113,8 +113,8 @@ class SpectrumPeak(rids.Rids):
         **fnargs are filenames for self.feature_components {"feature_component": <filename>}
         """
         fset_name = fset_tag + polarization
-        self.rids.feature_sets[fset_name] = Spectral(polarization=polarization)
-        self.rids.feature_sets[fset_name].freq = []
+        self.feature_sets[fset_name] = Spectral(polarization=polarization)
+        self.feature_sets[fset_name].freq = []
         spectra = {}
         for fc, sfn in fnargs.iteritems():
             if fc not in self.feature_components or sfn is None:
@@ -122,10 +122,10 @@ class SpectrumPeak(rids.Rids):
             spectra[fc] = Spectral()
             spectrum_reader(sfn, spectra[fc], polarization)
             if is_spectrum(fset_tag):
-                if len(spectra[fc].freq) > len(self.rids.feature_sets[fset_name].freq):
-                    self.rids.feature_sets[fset_name].freq = spectra[fc].freq
-                setattr(self.rids.feature_sets[fset_name], fc, spectra[fc].val)
-        self.rids.nsets += 1
+                if len(spectra[fc].freq) > len(self.feature_sets[fset_name].freq):
+                    self.feature_sets[fset_name].freq = spectra[fc].freq
+                setattr(self.feature_sets[fset_name], fc, spectra[fc].val)
+        self.nsets += 1
         if is_spectrum(fset_tag):
             return
 
@@ -147,17 +147,17 @@ class SpectrumPeak(rids.Rids):
         self.find_bw()
 
         # put values in feature set dictionary
-        self.rids.feature_sets[fset_name].freq = list(np.array(self.hipk_freq)[self.hipk])
+        self.feature_sets[fset_name].freq = list(np.array(self.hipk_freq)[self.hipk])
         for fc, sfn in fnargs.iteritems():
             if sfn is None:
                 continue
             try:
-                setattr(self.rids.feature_sets[fset_name], fc, list(np.array(spectra[fc].val)[self.hipk]))
+                setattr(self.feature_sets[fset_name], fc, list(np.array(spectra[fc].val)[self.hipk]))
             except IndexError:
                 pass
-        self.rids.feature_sets[fset_name].bw = self.hipk_bw
-        ftr_fmin = min(self.rids.feature_sets[fset_name].freq)
-        ftr_fmax = max(self.rids.feature_sets[fset_name].freq)
+        self.feature_sets[fset_name].bw = self.hipk_bw
+        ftr_fmin = min(self.feature_sets[fset_name].freq)
+        ftr_fmax = max(self.feature_sets[fset_name].freq)
         if ftr_fmin < self.fmin:
             self.fmin = ftr_fmin
         if ftr_fmax > self.fmax:
@@ -218,7 +218,7 @@ class SpectrumPeak(rids.Rids):
         line_list = ['-', '--', ':']
         c = 0
         bl = 0
-        for f, v in self.rids.feature_sets.iteritems():
+        for f, v in self.feature_sets.iteritems():
             if is_spectrum(f) and not show_data:
                 continue
             if is_spectrum(f):
@@ -234,7 +234,7 @@ class SpectrumPeak(rids.Rids):
             for fc in show_components:
                 try:
                     i = show_components.index(fc)
-                    spectrum_plotter(self.rids.rid_file, is_spectrum(f), v.freq, getattr(v, fc), fmt[i], clr[i], ls[i])
+                    spectrum_plotter(self.rid_file, is_spectrum(f), v.freq, getattr(v, fc), fmt[i], clr[i], ls[i])
                 except AttributeError:
                     pass
             if is_spectrum(f):
@@ -244,7 +244,7 @@ class SpectrumPeak(rids.Rids):
                 vv = np.array(getattr(v, self.peaked_on))
                 fv = np.array(v.freq)
                 bw = np.array(v.bw)
-                if 'dB' in self.rids.val_unit:
+                if 'dB' in self.val_unit:
                     vv2 = vv - 6.0
                 else:
                     vv2 = vv / 4.0
@@ -329,12 +329,12 @@ class SpectrumPeak(rids.Rids):
                         continue
                     file_times.append(fnd['timestamp'])
                     ftrfiles[pol][feco].append(os.path.join(directory, af))
-                    if self.rids.ident is None:
-                        self.rids.ident = fnd['ident']
-            if self.rids.ident not in self.delta_values:
+                    if self.ident is None:
+                        self.ident = fnd['ident']
+            if self.ident not in self.delta_values:
                 self.delta = 0.1
             else:
-                self.delta = self.delta_values[self.rids.ident]
+                self.delta = self.delta_values[self.ident]
             if not loop:
                 break
             # Go through and count the sorted available files
@@ -349,11 +349,11 @@ class SpectrumPeak(rids.Rids):
                         ftrfiles[pol][fc] = ftrfiles[pol][fc] + [None] * diff_len
                     num_to_read[pol] = len(ftrfiles[pol][fc])  # Yes, does get reset many times
             file_times = sorted(file_times)
-            self.rids.timestamp_first = file_times[0]
-            self.rids.timestamp_last = file_times[-1]
+            self.timestamp_first = file_times[0]
+            self.timestamp_last = file_times[-1]
             # Process the files
-            self.rids.feature_sets = {}
-            self.rids.nsets = 0
+            self.feature_sets = {}
+            self.nsets = 0
             for pol in self.polarizations:
                 if not max_pol_cnt[pol]:
                     continue
@@ -397,11 +397,11 @@ class SpectrumPeak(rids.Rids):
             else:
                 pk = 'None'
                 th = ''
-            fn = "{}_{}.{}.n{}.{}{}.ridz".format(self.rids.ident, self.feature_module_name,
-                                                 self.rids.timestamp_first, self.rids.nsets,
+            fn = "{}_{}.{}.n{}.{}{}.ridz".format(self.ident, self.feature_module_name,
+                                                 self.timestamp_first, self.nsets,
                                                  pk, th)
             self.filename = os.path.join(directory, fn)
-            self.rids.writer(self.filename)
+            self.writer(self.filename)
 
 
 def spectrum_reader(filename, spec, polarization=None):

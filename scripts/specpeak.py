@@ -66,7 +66,7 @@ if __name__ == '__main__':
         if '.' not in args.parameters:
             full_filename += '.ridm'
         r.reader(full_filename)
-        r.rids.append_comment(args.comment)
+        r.append_comment(args.comment)
         if args.ecal is not None:
             r.read_cal(args.ecal, 'E')
         if args.ncal is not None:

@@ -33,13 +33,12 @@ class Rids(object):
             nsets:  number of feature_sets included in file
             timestamp_first:  timestamp for first feature_set (currently assumes timestamps sort)
             timestamp_last:           "     last          "                 "
-            feature_module_name:  name of the feature module used
             feature_sets:  features etc defined in the feature module
     """
     # Along with the feature attributes, these are the allowed attributes for json r/w
     direct_attributes = ['rid_file', 'ident', 'instrument', 'receiver', 'comment',
                          'timestamp_first', 'timestamp_last', 'time_format',
-                         'freq_unit', 'val_unit', 'nsets', 'feature_module_name']
+                         'freq_unit', 'val_unit', 'nsets']
     unit_attributes = ['channel_width', 'time_constant']
 
     def __init__(self, comment=None, **diagnose):
@@ -157,7 +156,7 @@ class Rids(object):
         ds['feature_sets'] = {}
         for d in self.feature_sets:
             ds['feature_sets'][d] = {}
-            for v in self.features.feature_components:
+            for v in self.feature_components:
                 try:
                     ds['feature_sets'][d][v] = getattr(self.feature_sets[d], v)
                 except AttributeError:
