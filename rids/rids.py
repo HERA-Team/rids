@@ -6,7 +6,7 @@ import copy
 import numpy as np
 
 
-class Rids:
+class Rids(object):
     """
     RF Interference Data System (RIDS)
     Reads/writes .ridm/.ridz files, JSON files with fields as described below.  This is the building
@@ -42,7 +42,7 @@ class Rids:
                          'freq_unit', 'val_unit', 'nsets', 'feature_module_name']
     unit_attributes = ['channel_width', 'time_constant']
 
-    def __init__(self, feature_module=None, comment=None, **diagnose):
+    def __init__(self, comment=None, **diagnose):
         for d in self.direct_attributes:
             setattr(self, d, None)
         for d in self.unit_attributes:
@@ -51,30 +51,13 @@ class Rids:
         # Re-initialize non-None and add other
         self.comment = comment
         self.nsets = 0
-        # Add in features
-        self.feature_sets = {}
-        self.feature_module_for_reset = feature_module
-        if feature_module is None:
-            from argparse import Namespace
-            self.features = Namespace()
-            self.feature_module_name = 'None'
-            self.features.direct_attributes = []
-            self.features.unit_attributes = []
-            self.features.read_feature_set_dict = None
-        else:
-            self.features = feature_module
-            self.feature_module_name = self.features.feature_module_name
-            for d in self.features.direct_attributes:
-                setattr(self, d, None)
-            for d in self.features.unit_attributes:
-                setattr(self, d, None)
-                setattr(self, d + '_unit', None)
+        self.feature_sets = None
         # --Other variables--
         for a, b in diagnose.iteritems():
             setattr(self, a, b)
 
     def reset(self):
-        self.__init__(self.feature_module_for_reset)
+        self.__init__()
 
     def get_datetime_from_timestamp(self, ts):
         if self.time_format.lower() == 'julian':
@@ -91,7 +74,25 @@ class Rids:
                 print("{} is invalid format for {}".format(self.time_format, ts))
         return None
 
+    def set(self, **kwargs):
+        for k in kwargs:
+            if k in self.direct_attributes:
+                setattr(self, k, kwargs[k])
+            elif k in self.unit_attributes:
+                self.set_unit_values(self, k, kwargs[k])
+
+    def append_comment(self, comment):
+        if comment is None:
+            return
+        if self.comment is None:
+            self.comment = comment
+        else:
+            self.comment += ('\n' + comment)
+
     def reader(self, filename, reset=True):
+        self._reader(filename, reset=reset)
+
+    def _reader(self, filename, feature_direct=[], feature_unit=[], reset=True):
         """
         This will read a RID file with a full or subset of structure entities.
 
@@ -117,19 +118,22 @@ class Rids:
                 self.append_comment(val)
             elif d in self.direct_attributes:
                 setattr(self, d, val)
-            elif d in self.features.direct_attributes:
-                setattr(self.features, d, val)
+            elif d in feature_direct:
+                setattr(self, d, val)
             elif d in self.unit_attributes:
                 set_unit_values(self, d, val)
-            elif d in self.features.unit_attributes:
-                set_unit_values(self.features, d, val)
+            elif d in feature_unit:
+                set_unit_values(self, d, val)
             elif d == 'feature_sets':
-                if self.features.read_feature_set_dict is None:
+                if self.feature_sets is None:
                     continue
                 for k, fs in val.iteritems():
-                    self.feature_sets[k] = self.features.read_feature_set_dict(fs)
+                    self.feature_sets[k] = self.read_feature_set_dict(fs)
 
     def writer(self, filename, fix_list=True):
+        self._writer(filename, fix_list=fix_list)
+
+    def _writer(self, filename, feature_direct=[], feature_unit=[], fix_list=True):
         """
         This writes a RID file with a full structure.  If a field is None it ignores.
         """
@@ -138,18 +142,18 @@ class Rids:
             val = getattr(self, d)
             if val is not None:
                 ds[d] = val
-        for d in self.features.direct_attributes:
-            val = getattr(self.features, d)
+        for d in feature_direct:
+            val = getattr(self, d)
             if val is not None:
                 ds[d] = val
         for d in self.unit_attributes:
             val = getattr(self, d)
             if val is not None:
                 ds[d] = "{} {}".format(val, getattr(self, d + '_unit'))
-        for d in self.features.unit_attributes:
-            val = getattr(self.features, d)
+        for d in feature_unit:
+            val = getattr(self, d)
             if val is not None:
-                ds[d] = "{} {}".format(val, getattr(self.features, d + '_unit'))
+                ds[d] = "{} {}".format(val, getattr(self, d + '_unit'))
         ds['feature_sets'] = {}
         for d in self.feature_sets:
             ds['feature_sets'][d] = {}
@@ -169,31 +173,19 @@ class Rids:
         with r_open(filename, 'wb') as f:
             f.write(jsd)
 
-    def set(self, **kwargs):
-        for k in kwargs:
-            if k in self.direct_attributes:
-                setattr(self, k, kwargs[k])
-            elif k in self.unit_attributes:
-                self.set_unit_values(self, k, kwargs[k])
-
-    def append_comment(self, comment):
-        if comment is None:
-            return
-        if self.comment is None:
-            self.comment = comment
-        else:
-            self.comment += ('\n' + comment)
-
     def info(self):
+        self._info()
+
+    def _info(self, feature_direct=[], feature_unit=[]):
         print("RIDS Information")
         for d in self.direct_attributes:
             print("\t{}:  {}".format(d, getattr(self, d)))
         for d in self.unit_attributes:
             print("\t{}:  {} {}".format(d, getattr(self, d), getattr(self, d + '_unit')))
-        for d in self.features.direct_attributes:
-            print("\tfeatures.{}:  {}".format(d, getattr(self.features, d)))
-        for d in self.features.unit_attributes:
-            print("\tfeatures.{}:  {} {}".format(d, getattr(self.features, d), getattr(self.features, d + '_unit')))
+        for d in feature_direct:
+            print("\tfeatures.{}:  {}".format(d, getattr(self, d)))
+        for d in feature_unit:
+            print("\tfeatures.{}:  {} {}".format(d, getattr(self, d), getattr(self, d + '_unit')))
         if self.nsets != len(self.feature_sets):
             print("Note that the stated nsets={} does not match the found nsets={}".format(self.nsets, len(self.feature_sets)))
 

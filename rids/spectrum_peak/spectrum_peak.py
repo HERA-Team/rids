@@ -36,7 +36,7 @@ def is_spectrum(tag):
     return 'data' in tag.lower() or 'cal' in tag.lower() or 'baseline' in tag.lower()
 
 
-class SpectrumPeak:
+class SpectrumPeak(rids.Rids):
     """
     Feature module:
     This feature module searches a directory for spectrum files and saves feature sets based
@@ -58,26 +58,26 @@ class SpectrumPeak:
         rbw:  if spectrum analyzer, resolution bandwidth (probably channel_width)
         rbw_unit:
     """
-    direct_attributes = ['comment', 'peaked_on', 'delta', 'bw_range', 'delta_values', 'fmin', 'fmax']
-    unit_attributes = ['threshold', 'rbw', 'vbw']
+    sp__direct_attributes = ['peaked_on', 'delta', 'bw_range', 'delta_values', 'fmin', 'fmax']
+    sp__unit_attributes = ['threshold', 'rbw', 'vbw']
     feature_module_name = 'SpectrumPeak'
     polarizations = ['E', 'N', 'I']
 
     def __init__(self, comment='', view_ongoing=False):
-        for d in self.direct_attributes:
+        # Initialize base attributes
+        super(SpectrumPeak, self).__init__(comment)
+
+        # Initialize feature_module attributes
+        for d in self.sp__direct_attributes:
             setattr(self, d, None)
-        for d in self.unit_attributes:
+        for d in self.sp__unit_attributes:
             setattr(self, d, None)
             setattr(self, d + '_unit', None)
+
         # Re-initialize attributes
-        self.comment = comment
         self.bw_range = []  # Range to search for bandwidth
         self.delta_values = {'zen': 0.1, 'sa': 1.0}
-        # Copy rids to local
-        self.rids = rids.Rids(self)
-        self.reader = self.rids.reader
-        self.writer = self.rids.writer
-        self.info = self.rids.info
+        self.feature_sets = {}
         # Other attributes
         feature_set_info = Spectral()
         self.feature_components = feature_set_info.spectral_fields
@@ -85,15 +85,18 @@ class SpectrumPeak:
         self.hipk_bw = None
         self.view_ongoing_features = view_ongoing
 
-    def reset(self):
-        self.__init__()
+    # Redefine the reader/writer/info base modules
+    def reader(self, filename, reset=True):
+        self._reader(filename, feature_direct=self.sp__direct_attributes,
+                     feature_unit=self.sp__unit_attributes, reset=reset)
 
-    def set(self, **kwargs):
-        for k in kwargs:
-            if k in self.direct_attributes:
-                setattr(self, k, kwargs[k])
-            elif k in self.unit_attributes:
-                self.rids.set_unit_values(self, k, kwargs[k])
+    def writer(self, filename, fix_list=True):
+        self._writer(filename, feature_direct=self.sp__direct_attributes,
+                     feature_unit=self.sp__unit_attributes, fix_list=fix_list)
+
+    def info(self):
+        self._info(feature_direct=self.sp__direct_attributes,
+                   feature_unit=self.sp__unit_attributes)
 
     def read_feature_set_dict(self, fs):
         feature_set = Spectral()
