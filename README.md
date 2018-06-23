@@ -22,9 +22,10 @@ Any field may be omitted or missing.
   * nsets:  number of feature_sets included in file
   * timestamp_first:  timestamp for first feature_set (currently assumes timestamps sort)
   * timestamp_last:           "     last          "                 "
-  * feature_module_name:  name of the feature module used
   * feature_sets:  features etc defined in the feature module
 
 ## Current feature_modules:
 
 * SpectrumPeak
+Adds additional attributes and defines the feature_sets.  Redefines reader/writer/info to
+include the additional attributes.
