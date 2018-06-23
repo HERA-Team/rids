@@ -16,20 +16,20 @@ def test_reconstitute_params():
     fc2use = 'maxhold'
 
     print("<defaults>")
-    rcf.reconstitute_params(rid.rids, fs, fc2use)
+    rcf.reconstitute_params(rid, fs, fc2use)
     print("{}\n\t{}".format(fc2use, rcf.reconstituted_info))
 
     # dfill
     print('\n<dfill>')
     dfill_types = ['feature_set_min', 'component_min', 'maxhold', 'minhold', 'val', -20.0, '-30.0']
     for dfy in dfill_types:
-        rcf.reconstitute_params(rid.rids, fs, fc2use, dfill=dfy)
+        rcf.reconstitute_params(rid, fs, fc2use, dfill=dfy)
         print("{}, {}\n\t{}".format(dfy, fc2use, rcf.reconstituted_info))
     # fstep
     print('\n<fstep>')
     fstep_types = ['channel', 0.1, '0.1']
     for ffy in fstep_types:
-        rcf.reconstitute_params(rid.rids, fs, fc2use, fstep=ffy)
+        rcf.reconstitute_params(rid, fs, fc2use, fstep=ffy)
         print("{}\n\t{}".format(ffy, rcf.reconstituted_info))
 
 
@@ -39,9 +39,9 @@ def test_reconstitute_features():
     rcf = sp.sp_handling.SPHandling()
     fs = '20180526-1033.E'
     fc2use = 'maxhold'
-    rcf.reconstitute_features(rid.rids, fs, fc2use, dfill='component_min')
+    rcf.reconstitute_features(rid, fs, fc2use, dfill='component_min')
     rcf.reconstitute_plot(fs)
     dfs = 'data.20180526-1033.E'
-    rcf.reconstitute_features(rid.rids, dfs, fc2use, dfill='component_min')
+    rcf.reconstitute_features(rid, dfs, fc2use, dfill='component_min')
     rcf.reconstitute_plot(fs, ptype='spec')
     plt.show()

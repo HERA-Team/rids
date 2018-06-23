@@ -55,7 +55,7 @@ class SPHandling:
         self.reconstituted_info.fstep = 'channel'
         self.reconstituted_info.dfill = 'component_min'
         for x in ['fmin', 'fmax']:
-            setattr(self.reconstituted_info, x, getattr(rid.features, x))
+            setattr(self.reconstituted_info, x, getattr(rid, x))
         # ...final values
         for x in param:
             setattr(self.reconstituted_info, x, param[x])
