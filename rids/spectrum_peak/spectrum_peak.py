@@ -45,6 +45,7 @@ class SpectrumPeak(rids.Rids):
     The feature_module_name is "SpectrumPeak"
 
     Direct attributes are:
+        feature_module_name:  SpectrumPeak
         comment:  generic comments
         peaked_on:  event_component on which peaks were found
         delta:  delta value used in the peak-finding routine

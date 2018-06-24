@@ -185,7 +185,7 @@ class Rids(object):
             print("\tfeatures.{}:  {}".format(d, getattr(self, d)))
         for d in feature_unit:
             print("\tfeatures.{}:  {} {}".format(d, getattr(self, d), getattr(self, d + '_unit')))
-        if self.nsets != len(self.feature_sets):
+        if self.feature_sets is not None and self.nsets != len(self.feature_sets):
             print("Note that the stated nsets={} does not match the found nsets={}".format(self.nsets, len(self.feature_sets)))
 
 
