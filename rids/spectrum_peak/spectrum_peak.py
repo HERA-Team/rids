@@ -122,6 +122,12 @@ class SpectrumPeak(rids.Rids):
                 continue
             spectra[fc] = Spectral()
             spectrum_reader(sfn, spectra[fc], polarization)
+            ftr_fmin = min(spectra[fc].freq)
+            ftr_fmax = max(spectra[fc].freq)
+            if ftr_fmin < self.fmin:
+                self.fmin = ftr_fmin
+            if ftr_fmax > self.fmax:
+                self.fmax = ftr_fmax
             if is_spectrum(fset_tag):
                 if len(spectra[fc].freq) > len(self.feature_sets[fset_name].freq):
                     self.feature_sets[fset_name].freq = spectra[fc].freq
@@ -157,12 +163,6 @@ class SpectrumPeak(rids.Rids):
             except IndexError:
                 pass
         self.feature_sets[fset_name].bw = self.hipk_bw
-        ftr_fmin = min(self.feature_sets[fset_name].freq)
-        ftr_fmax = max(self.feature_sets[fset_name].freq)
-        if ftr_fmin < self.fmin:
-            self.fmin = ftr_fmin
-        if ftr_fmax > self.fmax:
-            self.fmax = ftr_fmax
 
     def peak_det(self, spec, delta=0.1):
         self.hipk_freq = spec.freq
@@ -220,25 +220,26 @@ class SpectrumPeak(rids.Rids):
         c = 0
         bl = 0
         for f, v in self.feature_sets.iteritems():
-            if is_spectrum(f) and not show_data:
+            issp = is_spectrum(f)
+            if issp and not show_data:
                 continue
-            if is_spectrum(f):
+            if issp:
                 clr = [fc_list[x][0] for x in show_components]
                 ls = [line_list[bl % len(line_list)]] * len(show_components)
-                fmt = [None] * len(show_components)
+                fmt = zip(clr, ls)
                 bl += 1
             else:
                 clr = [color_list[c % len(color_list)]] * len(show_components)
-                ls = [None] * len(show_components)
-                fmt = [fc_list[x][1] for x in fc_list]
+                mkr = [fc_list[x][1] for x in fc_list]
+                fmt = zip(clr, mkr)
                 c += 1
             for fc in show_components:
                 try:
                     i = show_components.index(fc)
-                    spectrum_plotter(self.rid_file, is_spectrum(f), v.freq, getattr(v, fc), fmt[i], clr[i], ls[i])
+                    spectrum_plotter(v.freq, getattr(v, fc), fmt=fmt[i], is_spectrum=issp, figure_name=self.rid_file)
                 except AttributeError:
                     pass
-            if is_spectrum(f):
+            if issp:
                 continue
             # Now plot bandwidth
             try:
@@ -420,23 +421,24 @@ def spectrum_reader(filename, spec, polarization=None):
             spec.val.append(data[1])
 
 
-def spectrum_plotter(figure_name, is_spectrum, x, y, fmt, clr, ls, ret_xy=False):
+def spectrum_plotter(x, y, fmt=None, is_spectrum=False, figure_name=None):
     if not len(x) or not len(y):
         return
-    try:
+    if len(x) > len(y):
         _X = x[:len(y)]
         _Y = y[:]
-    except ValueError:
+    else:
         _X = x[:]
         _Y = y[:len(x)]
-    if ret_xy:
+    if fmt is None:
         return _X, _Y
 
-    plt.figure(figure_name)
+    if figure_name is not None:
+        plt.figure(figure_name)
     if is_spectrum:
-        plt.plot(_X, _Y, clr, linestyle=ls)
+        plt.plot(_X, _Y, color=fmt[0], linestyle=fmt[1])
     else:
-        plt.plot(_X, _Y, fmt, color=clr)
+        plt.plot(_X, _Y, color=fmt[0], marker=fmt[1], linestyle="None")
 
 
 def peel_filename(v, fclist=None):

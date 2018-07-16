@@ -27,11 +27,16 @@ ap.add_argument('--threshold_view', help="new threshold for viewing (if possible
 ap.add_argument('--max_loops', help="maximum number of iteration loops", default=1000)
 ap.add_argument('--data_only', help="flag to only store data and not peaks", action='store_true')
 ap.add_argument('--data_only_override', help="flag to force data_only without saving all", action='store_true')
+ap.add_argument('--archive_data', help="Flag to archive all data (shortcut for data_only=True and rawdata='+1').", action='store_true')
 
 args = ap.parse_args()
+if args.archive_data:
+    args.data_only = True
+    args.rawdata = '+1'
 if args.data_only and args.rawdata != '+1' and not args.data_only_override:
     print("Warning:  This will delete the data but not save all of the raw data.")
     raise ValueError("If this is desired then rerun with flag --data_only_override")
+
 args.max_loops = int(args.max_loops)
 args.sets_per_pol = int(args.sets_per_pol)
 if args.view:

@@ -3,7 +3,7 @@
 # Licensed under the 2-clause BSD license.
 
 from . import spectrum_peak
+from . import sp_handling
 from . import bw_finder
 from . import peak_det
 from . import peaks
-from . import sp_handling

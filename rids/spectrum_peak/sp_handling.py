@@ -111,7 +111,7 @@ class SPHandling:
                                  feature_component=feature_component, **param)
         if spectrum_peak.is_spectrum(feature_key):
             self.reconstituted_info.freq, self.reconstituted_info.spec =\
-                spectrum_peak.spectrum_plotter(feature_key, True, freq, data, None, 'k', '-', True)
+                spectrum_peak.spectrum_plotter(freq, data, fmt=None)
             return
 
         self.reconstituted_info.freq = np.arange(self.reconstituted_info.fmin,
@@ -150,7 +150,26 @@ class SPHandling:
         Give a date range to go over to make a reconstituted waterfall plot.
         """
 
-    def raw_data_waterfall(self, start_time, stop_time):
+    def raw_data_waterfall(self, rid, feature_component, start_time=None, stop_time=None):
         """
         Give a date range to make a waterfall with whatever raw data is in the file(s)
         """
+        sorted_ftr_keys = sorted(rid.feature_sets.keys())
+        freq = None
+        times = []
+        fslens = []
+        wf = []
+        for fs in sorted_ftr_keys:
+            if spectrum_peak.is_spectrum(fs):
+                times.append(fs)
+                fslens.append([len(rid.feature_sets[fs].freq), len(getattr(rid.feature_sets[fs], feature_component))])
+                if freq is None or fslens[-1][0] < len(freq):
+                    freq = rid.feature_sets[fs].freq[:]
+                x, y = spectrum_peak.spectrum_plotter(freq, getattr(rid.feature_sets[fs], feature_component), None)
+                if len(x) < len(freq):
+                    freq = x[:]
+        for i, fs in enumerate(times):
+            print(fs, fslens[i])
+            x, y = spectrum_peak.spectrum_plotter(freq, getattr(rid.feature_sets[fs], feature_component), None)
+            wf.append(y)
+        plt.imshow(wf)
