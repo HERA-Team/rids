@@ -172,4 +172,4 @@ class SPHandling:
             print(fs, fslens[i])
             x, y = spectrum_peak.spectrum_plotter(freq, getattr(rid.feature_sets[fs], feature_component), None)
             wf.append(y)
-        plt.imshow(wf)
+        plt.imshow(wf, aspect='auto', extent=[freq[0], freq[-1], 0, len(wf)])
