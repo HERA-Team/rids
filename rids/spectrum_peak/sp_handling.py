@@ -150,11 +150,15 @@ class SPHandling:
         Give a date range to go over to make a reconstituted waterfall plot.
         """
 
-    def raw_data_waterfall(self, rid, feature_component, start_time=None, stop_time=None):
+    def raw_data_plot(self, rid, feature_component, plot_type='waterfall'):
         """
-        Give a date range to make a waterfall with whatever raw data is in the file(s)
+        Give a date range to make a waterfall with whatever raw data is in the file
         """
         sorted_ftr_keys = sorted(rid.feature_sets.keys())
+        t0 = rid.get_datetime_from_timestamp(sorted_ftr_keys[0].split('.')[1])
+        tn = rid.get_datetime_from_timestamp(sorted_ftr_keys[-1].split('.')[1])
+        print("Data span {} - {}".format(t0, tn))
+        duration = (tn - t0).total_seconds() / 3600.0
         freq = None
         times = []
         fslens = []
@@ -166,10 +170,20 @@ class SPHandling:
                 if freq is None or fslens[-1][0] < len(freq):
                     freq = rid.feature_sets[fs].freq[:]
                 x, y = spectrum_peak.spectrum_plotter(freq, getattr(rid.feature_sets[fs], feature_component), None)
+                if plot_type == 'stack':
+                    plt.plot(x, y)
                 if len(x) < len(freq):
                     freq = x[:]
-        for i, fs in enumerate(times):
-            print(fs, fslens[i])
-            x, y = spectrum_peak.spectrum_plotter(freq, getattr(rid.feature_sets[fs], feature_component), None)
-            wf.append(y)
-        plt.imshow(wf, aspect='auto', extent=[freq[0], freq[-1], 0, len(wf)])
+        if plot_type == 'waterfall':
+            for i, fs in enumerate(times):
+                if fs[8] != '8':
+                    print(fs, fslens[i])
+                x, y = spectrum_peak.spectrum_plotter(freq, getattr(rid.feature_sets[fs], feature_component), None)
+                wf.append(y)
+            plt.imshow(wf, aspect='auto', extent=[freq[0], freq[-1], 0, duration])
+            plt.xlabel('Freq [{}]'.format(rid.freq_unit))
+            plt.ylabel('Hours after {}'.format(t0))
+            plt.colorbar()
+        elif plot_type == 'stack':
+            plt.xlabel('Freq [{}]'.format(rid.freq_unit))
+            plt.ylabel('Power [{}]'.format(rid.val_unit))
