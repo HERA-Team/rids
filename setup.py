@@ -1,3 +1,4 @@
+from __future__ import print_function, division, absolute_import
 import os
 from setuptools import setup, find_packages
 PACKAGES = find_packages()
@@ -28,4 +29,4 @@ setup_args = dict(name=NAME,
 
 
 if __name__ == '__main__':
-    apply(setup, (), setup_args)
+    setup(**setup_args)

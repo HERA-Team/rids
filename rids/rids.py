@@ -52,7 +52,7 @@ class Rids(object):
         self.nsets = 0
         self.feature_sets = None
         # --Other variables--
-        for a, b in diagnose.iteritems():
+        for a, b in diagnose.items():
             setattr(self, a, b)
 
     def reset(self):
@@ -112,7 +112,7 @@ class Rids(object):
             r_open = open
         with r_open(filename, 'rb') as f:
             data = json.load(f)
-        for d, val in data.iteritems():
+        for d, val in data.items():
             if d == 'comment':
                 self.append_comment(val)
             elif d in self.direct_attributes:
@@ -126,7 +126,7 @@ class Rids(object):
             elif d == 'feature_sets':
                 if self.feature_sets is None:
                     continue
-                for k, fs in val.iteritems():
+                for k, fs in val.items():
                     self.feature_sets[k] = self.read_feature_set_dict(fs)
 
     def writer(self, filename, fix_list=True):

@@ -10,10 +10,10 @@ from __future__ import print_function, absolute_import, division
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-from rids import rids
-# import peaks  # Scipy option
-import peak_det  # Another option that seems to do better.
-import bw_finder
+from .. import rids
+# from . import peaks  # Scipy option
+from . import peak_det  # Another option that seems to do better.
+from . import bw_finder
 
 
 class Spectral:
@@ -101,7 +101,7 @@ class SpectrumPeak(rids.Rids):
 
     def read_feature_set_dict(self, fs):
         feature_set = Spectral()
-        for v, Y in fs.iteritems():
+        for v, Y in fs.items():
             if v not in self.feature_components:
                 print("Unexpected field {}".format(v))
                 continue
@@ -117,7 +117,7 @@ class SpectrumPeak(rids.Rids):
         self.feature_sets[fset_name] = Spectral(polarization=polarization)
         self.feature_sets[fset_name].freq = []
         spectra = {}
-        for fc, sfn in fnargs.iteritems():
+        for fc, sfn in fnargs.items():
             if fc not in self.feature_components or sfn is None:
                 continue
             spectra[fc] = Spectral()
@@ -155,7 +155,7 @@ class SpectrumPeak(rids.Rids):
 
         # put values in feature set dictionary
         self.feature_sets[fset_name].freq = list(np.array(self.hipk_freq)[self.hipk])
-        for fc, sfn in fnargs.iteritems():
+        for fc, sfn in fnargs.items():
             if sfn is None:
                 continue
             try:
@@ -219,7 +219,7 @@ class SpectrumPeak(rids.Rids):
         line_list = ['-', '--', ':']
         c = 0
         bl = 0
-        for f, v in self.feature_sets.iteritems():
+        for f, v in self.feature_sets.items():
             issp = is_spectrum(f)
             if issp and not show_data:
                 continue
@@ -363,7 +363,7 @@ class SpectrumPeak(rids.Rids):
                 # Get the data spectrum files
                 for i in data:
                     bld = {}
-                    for fc, fcfns in ftrfiles[pol].iteritems():
+                    for fc, fcfns in ftrfiles[pol].items():
                         if abs(i) >= len(fcfns) or fcfns[i] is None:
                             continue
                         fnd = peel_filename(fcfns[i], self.feature_components)
@@ -375,7 +375,7 @@ class SpectrumPeak(rids.Rids):
                 # Get the feature_sets, write unless data_only and remove processed files
                 for i in range(num_to_read[pol]):
                     fcd = {}
-                    for fc, fcfns in ftrfiles[pol].iteritems():
+                    for fc, fcfns in ftrfiles[pol].items():
                         fnd = peel_filename(fcfns[i], self.feature_components)
                         if 'timestamp' in fnd:
                             feature_tag = fnd['timestamp'] + '.'

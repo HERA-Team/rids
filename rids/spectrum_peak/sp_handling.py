@@ -59,7 +59,7 @@ class SPHandling:
         # ...final values
         for x in param:
             setattr(self.reconstituted_info, x, param[x])
-        if isinstance(self.reconstituted_info.dfill, (str, unicode)):
+        if isinstance(self.reconstituted_info.dfill, (str)):
             if self.reconstituted_info.dfill == 'component_min':
                 self.reconstituted_info.dfill = min(data)
             elif self.reconstituted_info.dfill in self.sp.feature_components:
@@ -76,7 +76,7 @@ class SPHandling:
                         self.reconstituted_info.dfill = v
             else:
                 self.reconstituted_info.dfill = float(self.reconstituted_info.dfill)
-        if isinstance(self.reconstituted_info.fstep, (str, unicode)):
+        if isinstance(self.reconstituted_info.fstep, (str)):
             if self.reconstituted_info.fstep == 'channel':
                 self.reconstituted_info.fstep = rid.channel_width
             else:
@@ -160,12 +160,12 @@ class SPHandling:
         print("Data span {} - {}".format(t0, tn))
         duration = (tn - t0).total_seconds()
         ts = 'Sec'
-        if duration > 300.0:
-            duration /= 60.0
-            ts = 'Min'
-        elif duration > 10000.0:
+        if duration > 10000.0:
             duration /= 3600
             ts = 'Hr'
+        elif duration > 300.0:
+            duration /= 60.0
+            ts = 'Min'
         freq = None
         times = []
         fslens = []
