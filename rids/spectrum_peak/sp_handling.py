@@ -158,7 +158,14 @@ class SPHandling:
         t0 = rid.get_datetime_from_timestamp(sorted_ftr_keys[0].split('.')[1])
         tn = rid.get_datetime_from_timestamp(sorted_ftr_keys[-1].split('.')[1])
         print("Data span {} - {}".format(t0, tn))
-        duration = (tn - t0).total_seconds() / 3600.0
+        duration = (tn - t0).total_seconds()
+        ts = 'Sec'
+        if duration > 300.0:
+            duration /= 60.0
+            ts = 'Min'
+        elif duration > 10000.0:
+            duration /= 3600
+            ts = 'Hr'
         freq = None
         times = []
         fslens = []
@@ -176,13 +183,11 @@ class SPHandling:
                     freq = x[:]
         if plot_type == 'waterfall':
             for i, fs in enumerate(times):
-                if fs[8] != '8':
-                    print(fs, fslens[i])
                 x, y = spectrum_peak.spectrum_plotter(freq, getattr(rid.feature_sets[fs], feature_component), None)
                 wf.append(y)
             plt.imshow(wf, aspect='auto', extent=[freq[0], freq[-1], 0, duration])
             plt.xlabel('Freq [{}]'.format(rid.freq_unit))
-            plt.ylabel('Hours after {}'.format(t0))
+            plt.ylabel('{} after {}'.format(ts, t0))
             plt.colorbar()
         elif plot_type == 'stack':
             plt.xlabel('Freq [{}]'.format(rid.freq_unit))
