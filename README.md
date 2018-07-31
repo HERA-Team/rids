@@ -27,7 +27,13 @@ Any field may be omitted or missing.
 
 # SpectrumPeak
 Adds additional attributes and defines the feature_sets.  Redefines reader/writer/info to
-include the additional attributes.  Current scripts are `specpeak.py` and `sphandle.py`
+include the additional attributes.  Current scripts are:
+
+* `specpeak.py`
+generates spectrum_peak ridz files from spectrum data files.  Includes a few general tools.
+
+* `sphandle.py`
+handles ridz files for display, analysis, etc
 
 The feature_sets are in a dictionary, with a key_name of `[optional_name.]timestamp.polarization`
 
