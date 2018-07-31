@@ -273,7 +273,7 @@ class SpectrumPeak(rids.Rids):
         print("NOT IMPLEMENTED YET: Apply the calibration, if available.")
 
     def process_files(self, directory='.', ident='all', data=[0, -1], peak_on=None,
-                      data_only=False, sets_per_pol=100, max_loops=1000):
+                      data_only=False, sets_per_pol=10000, max_loops=1000):
         """
         This is the standard method to process spectrum files in a directory to
         produce ridz files.  The module has an "outer loop" that is meant to handle
