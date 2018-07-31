@@ -28,11 +28,12 @@ Any field may be omitted or missing.
 
 * SpectrumPeak
 Adds additional attributes and defines the feature_sets.  Redefines reader/writer/info to
-include the additional attributes.  Current scripts are specpeak.py and sphandle.py
+include the additional attributes.  Current scripts are `specpeak.py` and `sphandle.py`
 
 # To run in a session
 Primarily use scripts, however in a python session
-```import rids
+```
+import rids
 r = rids.spectrum_peak.spectrum_peak.SpectrumPeak()
 r.reader(<fn>)
 ```
