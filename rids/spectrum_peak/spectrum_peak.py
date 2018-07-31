@@ -110,7 +110,8 @@ class SpectrumPeak(rids.Rids):
 
     def get_feature_sets(self, fset_tag, polarization, peak_on=None, **fnargs):
         """
-        Get the feature sets for current iteration
+        Get the feature sets for current iteration from individual spectrum files
+        with naming convention as realized in module 'peel_filename' below
         **fnargs are filenames for self.feature_components {"feature_component": <filename>}
         """
         fset_name = fset_tag + polarization

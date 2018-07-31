@@ -87,6 +87,7 @@ class Rids(object):
             self.comment = comment
         else:
             self.comment += ('\n' + comment)
+        self.comment = self.comment.strip()
 
     def reader(self, filename, reset=True):
         self._reader(filename, reset=reset)

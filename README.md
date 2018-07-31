@@ -30,10 +30,18 @@ Any field may be omitted or missing.
 Adds additional attributes and defines the feature_sets.  Redefines reader/writer/info to
 include the additional attributes.  Current scripts are `specpeak.py` and `sphandle.py`
 
+The feature_sets are in a dictionary, with a key_name of `[optional_name.]timestamp.polarization`
+
+If optional_name is included and is (currently) 'data', 'baseline', 'cal' this just saves the data as the
+appropriate feature_component (currently val, maxhold, or minhold).  Otherwise, it peak-fits on default
+feature_component (unless another is specified) and saves the peaks and bandwidth for a given threshold.
+
 # To run in a session
 Primarily use scripts, however in a python session
 ```
 import rids
 r = rids.spectrum_peak.spectrum_peak.SpectrumPeak()
 r.reader(<fn>)
+r.info() shows info about file
+r.viewer() will plot per the definition in feature_module
 ```
