@@ -2,6 +2,11 @@
 Reads/writes .ridm/.ridz files, JSON files with fields as described below.
 Timestamps should be sortable to increasing time (can fix this later if desired...).
 
+Two main divisions are:
+
+* meta-data/header:  descriptive attributes
+* feature_sets:  dictionary containing the data
+
 Any field may be omitted or missing.
 * This first set is metadata - typically stored in a .ridm file that gets read
   * ident: description of filename
@@ -24,6 +29,8 @@ Any field may be omitted or missing.
   * timestamp_last:           "     last          "                 "
   * feature_sets:  features etc defined in the feature module
 
+I'm trying to do proper unit testing, but so far haven't set it up properly.  Currently,
+`run_ridstests.py` while in the *tests* subdirectory
 
 # SpectrumPeak
 Adds additional attributes and defines the feature_sets.  Redefines reader/writer/info to
@@ -35,12 +42,6 @@ generates spectrum_peak ridz files from spectrum data files.  Includes a few gen
 * `sphandle.py`
 handles ridz files for display, analysis, etc
 
-The feature_sets are in a dictionary, with a key_name of `[optional_name.]timestamp.polarization`
-
-If optional_name is included and is (currently) 'data', 'baseline', 'cal' this just saves the data as the
-appropriate feature_component (currently val, maxhold, or minhold).  Otherwise, it peak-fits on default
-feature_component (unless another is specified) and saves the peaks and bandwidth for a given threshold.
-
 ## To run in a session
 Primarily use scripts, however in a python session
 ```
@@ -50,3 +51,9 @@ r.reader(<fn>)
 r.info() shows info about file
 r.viewer() will plot per the definition in feature_module
 ```
+
+The feature_sets are in a dictionary, with a key_name of `[optional_name.]timestamp.polarization`
+
+If optional_name is included and is (currently) 'data', 'baseline', or 'cal' this just saves the data as the
+appropriate feature_component (currently val, maxhold, or minhold).  Otherwise, it peak-fits on default
+feature_component (unless another is specified) and saves the peaks and bandwidth for a given threshold.
