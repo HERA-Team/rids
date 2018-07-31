@@ -18,7 +18,7 @@ Any field may be omitted or missing.
   * comment:  general comment; reader appends, doesn't overwrite
   * time_format:  string indicating the format of timestamp in filename
 * These are typically set in data-taking session
-  * rid_file:  records what it thinks the ridz filename should be
+  * rid_file:  records where the meta-data came from
   * nsets:  number of feature_sets included in file
   * timestamp_first:  timestamp for first feature_set (currently assumes timestamps sort)
   * timestamp_last:           "     last          "                 "
@@ -28,4 +28,11 @@ Any field may be omitted or missing.
 
 * SpectrumPeak
 Adds additional attributes and defines the feature_sets.  Redefines reader/writer/info to
-include the additional attributes.
+include the additional attributes.  Current scripts are specpeak.py and sphandle.py
+
+# To run in a session
+Primarily use scripts, however in a python session
+```import rids
+r = rids.spectrum_peak.spectrum_peak.SpectrumPeak()
+r.reader(<fn>)
+```
