@@ -24,9 +24,8 @@ Any field may be omitted or missing.
   * timestamp_last:           "     last          "                 "
   * feature_sets:  features etc defined in the feature module
 
-## Current feature_modules:
 
-* SpectrumPeak
+# SpectrumPeak
 Adds additional attributes and defines the feature_sets.  Redefines reader/writer/info to
 include the additional attributes.  Current scripts are `specpeak.py` and `sphandle.py`
 
@@ -36,7 +35,7 @@ If optional_name is included and is (currently) 'data', 'baseline', 'cal' this j
 appropriate feature_component (currently val, maxhold, or minhold).  Otherwise, it peak-fits on default
 feature_component (unless another is specified) and saves the peaks and bandwidth for a given threshold.
 
-# To run in a session
+## To run in a session
 Primarily use scripts, however in a python session
 ```
 import rids
