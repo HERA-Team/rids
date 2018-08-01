@@ -37,8 +37,7 @@ class Rids(object):
     """
     # Along with the feature attributes, these are the allowed attributes for json r/w
     direct_attributes = ['rid_file', 'ident', 'instrument', 'receiver', 'comment',
-                         'timestamp_first', 'timestamp_last', 'time_format',
-                         'freq_unit', 'val_unit', 'nsets']
+                         'timestamp_first', 'timestamp_last', 'time_format', 'nsets']
     unit_attributes = ['channel_width', 'time_constant']
 
     def __init__(self, comment=None, **diagnose):
@@ -90,9 +89,6 @@ class Rids(object):
         self.comment = self.comment.strip()
 
     def reader(self, filename, reset=True):
-        self._reader(filename, reset=reset)
-
-    def _reader(self, filename, feature_direct=[], feature_unit=[], reset=True):
         """
         This will read a RID file with a full or subset of structure entities.
 
@@ -105,6 +101,9 @@ class Rids(object):
         """
         if reset:
             self.reset()
+        self._reader(filename, reset=reset)
+
+    def _reader(self, filename, feature_direct=[], feature_unit=[]):
         self.rid_file = filename
         file_type = filename.split('.')[-1].lower()
         if file_type == 'ridz':
@@ -176,14 +175,20 @@ class Rids(object):
     def info(self):
         self._info()
 
-    def _info(self, feature_direct=[], feature_unit=[]):
+    def _info(self, feature_direct=[], feature_unit=[], dirlen=50):
         print("RIDS Information")
         for d in self.direct_attributes:
-            print("\t{}:  {}".format(d, getattr(self, d)))
+            val = getattr(self, d)
+            if len(str(val)) > dirlen:
+                val = str(val)[:dirlen] + ' ......'
+            print("\t{}:  {}".format(d, val))
         for d in self.unit_attributes:
             print("\t{}:  {} {}".format(d, getattr(self, d), getattr(self, d + '_unit')))
         for d in feature_direct:
-            print("\tfeatures.{}:  {}".format(d, getattr(self, d)))
+            val = getattr(self, d)
+            if len(str(val)) > dirlen:
+                val = str(val)[:dirlen] + ' ......'
+            print("\tfeatures.{}:  {}".format(d, val))
         for d in feature_unit:
             print("\tfeatures.{}:  {} {}".format(d, getattr(self, d), getattr(self, d + '_unit')))
         if self.feature_sets is not None and self.nsets != len(self.feature_sets):

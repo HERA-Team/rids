@@ -62,16 +62,16 @@ full_filename = os.path.join(args.directory, args.parameters)
 if __name__ == '__main__':
     r = sp.spectrum_peak.SpectrumPeak(share_freq=args.share_freq, view_ongoing=args.view_peaks_ongoing)
     if args.info:
-        r.reader(full_filename)
+        r.reader(full_filename, reset=False)
         r.info()
     elif args.view:
-        r.reader(full_filename)
+        r.reader(full_filename, reset=False)
         r.info()
         r.viewer(threshold=args.threshold_view, show_components=args.show_fc, show_data=args.rawdata)
     else:
         if '.' not in args.parameters:
             full_filename += '.ridm'
-        r.reader(full_filename)
+        r.reader(full_filename, reset=False)
         r.append_comment(args.comment)
         if args.ecal is not None:
             r.read_cal(args.ecal, 'E')

@@ -34,7 +34,11 @@ class Spectral:
 
 
 def is_spectrum(tag):
-    return 'data' in tag.lower() or 'cal' in tag.lower() or 'baseline' in tag.lower()
+    t = tag.lower()
+    for s in ['data', 'cal', 'baseline']:
+        if s in t:
+            return True
+    return False
 
 
 class SpectrumPeak(rids.Rids):
@@ -52,18 +56,22 @@ class SpectrumPeak(rids.Rids):
         delta:  delta value used in the peak-finding routine
         bw_range:  +/- bw_range (list) that gets searched over (and is then max)
         delta_values:  a dictionary with some default values
-    Unit attributes are:
         freq: can be used for is_spectrum feature_sets if desired
-        freq_unit:
+        freq_unit:  (even though a _unit, handled differently than unit attribute)
+        fmin: minimum frequency
+        fmax: maximum frequency
+        val_unit:  unit for data
+    Unit attributes are:
         threshold:  value used to threshold peaks
-        threshold_unit: unit of threshold
+        threshold_unit:
         vbw:  if spectrum analyzer, video bandwidth
         vbw_unit:
         rbw:  if spectrum analyzer, resolution bandwidth (probably channel_width)
         rbw_unit:
     """
-    sp__direct_attributes = ['peaked_on', 'delta', 'bw_range', 'delta_values', 'fmin', 'fmax', 'feature_module_name']
-    sp__unit_attributes = ['threshold', 'rbw', 'vbw', 'freq']
+    sp__direct_attributes = ['peaked_on', 'delta', 'bw_range', 'delta_values', 'feature_module_name',
+                             'freq', 'freq_unit', 'fmin', 'fmax', 'val_unit']
+    sp__unit_attributes = ['threshold', 'rbw', 'vbw']
     polarizations = ['E', 'N', 'I']
 
     def __init__(self, comment='', share_freq=False, view_ongoing=False):
@@ -92,8 +100,14 @@ class SpectrumPeak(rids.Rids):
 
     # Redefine the reader/writer/info base modules
     def reader(self, filename, reset=True):
+        if reset:
+            self.reset()
         self._reader(filename, feature_direct=self.sp__direct_attributes,
-                     feature_unit=self.sp__unit_attributes, reset=reset)
+                     feature_unit=self.sp__unit_attributes)
+        # now need to fill in the share_freq feature values, if any
+        for ftr in self.feature_sets:
+            if self.feature_sets[ftr].freq == '@':
+                self.feature_sets[ftr].freq = self.freq
 
     def writer(self, filename, fix_list=True):
         self._writer(filename, feature_direct=self.sp__direct_attributes,
@@ -102,6 +116,9 @@ class SpectrumPeak(rids.Rids):
     def info(self):
         self._info(feature_direct=self.sp__direct_attributes,
                    feature_unit=self.sp__unit_attributes)
+
+    def reset(self):
+        self.__init__(share_freq=self.share_freq, view_ongoing=self.view_ongoing_features)
 
     def read_feature_set_dict(self, fs):
         feature_set = Spectral()
@@ -135,12 +152,14 @@ class SpectrumPeak(rids.Rids):
                 self.fmax = ftr_fmax
             if is_spectrum(fset_tag):
                 if self.share_freq:
+                    self.feature_sets[fset_name].freq = '@'
                     if self.freq is None:
                         self.freq = copy.copy(spectra[fc].freq)
-                    self.feature_sets[fset_name].freq = self.freq
                 elif len(spectra[fc].freq) > len(self.feature_sets[fset_name].freq):
                     self.feature_sets[fset_name].freq = spectra[fc].freq
                 setattr(self.feature_sets[fset_name], fc, spectra[fc].val)
+            if len(spectra[fc].comment):
+                self.feature_sets[fset_name].comment += spectra[fc].comment
 
         self.nsets += 1
         if is_spectrum(fset_tag):
@@ -165,6 +184,8 @@ class SpectrumPeak(rids.Rids):
 
         # put values in feature set dictionary
         self.feature_sets[fset_name].freq = list(np.array(self.hipk_freq)[self.hipk])
+        if len(spectra[fc].comment):
+            self.feature_sets[fset_name].comment += spectra[fc].comment
         for fc, sfn in fnargs.items():
             if sfn is None:
                 continue
@@ -233,11 +254,14 @@ class SpectrumPeak(rids.Rids):
             issp = is_spectrum(f)
             if issp and not show_data:
                 continue
+            use_freq = v.freq
             if issp:
                 clr = [fc_list[x][0] for x in show_components]
                 ls = [line_list[bl % len(line_list)]] * len(show_components)
                 fmt = zip(clr, ls)
                 bl += 1
+                if use_freq == '@':
+                    use_freq = self.freq
             else:
                 clr = [color_list[c % len(color_list)]] * len(show_components)
                 mkr = [fc_list[x][1] for x in fc_list]
@@ -246,7 +270,7 @@ class SpectrumPeak(rids.Rids):
             for fc in show_components:
                 try:
                     i = show_components.index(fc)
-                    spectrum_plotter(v.freq, getattr(v, fc), fmt=fmt[i], is_spectrum=issp, figure_name=self.rid_file)
+                    spectrum_plotter(use_freq, getattr(v, fc), fmt=fmt[i], is_spectrum=issp, figure_name=self.rid_file)
                 except AttributeError:
                     pass
             if issp:
@@ -254,7 +278,7 @@ class SpectrumPeak(rids.Rids):
             # Now plot bandwidth
             try:
                 vv = np.array(getattr(v, self.peaked_on))
-                fv = np.array(v.freq)
+                fv = np.array(use_freq)
                 bw = np.array(v.bw)
                 if 'dB' in self.val_unit:
                     vv2 = vv - 6.0
@@ -400,10 +424,13 @@ class SpectrumPeak(rids.Rids):
                         if x is not None:
                             os.remove(x)
             # Write the ridz file
-            th = self.threshold
-            if abs(self.threshold) < 1.0:
-                th *= 100.0
-            th = 'T{:.0f}'.format(th)
+            if self.threshold is not None:
+                th = self.threshold
+                if abs(self.threshold) < 1.0:
+                    th *= 100.0
+                th = 'T{:.0f}'.format(th)
+            else:
+                th = ''
             if self.peaked_on is not None:
                 pk = self.peaked_on[:3]
             else:
@@ -426,6 +453,9 @@ def spectrum_reader(filename, spec, polarization=None):
         spec.polarization = polarization
     with open(filename, 'r') as f:
         for line in f:
+            if line.strip()[0] == ':':
+                spec.comment += (line.strip()[1:] + '\n')
+                continue
             data = [float(x) for x in line.split()]
             spec.freq.append(data[0])
             spec.val.append(data[1])
