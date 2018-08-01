@@ -11,16 +11,17 @@ from rids import spectrum_peak as sp
 
 ap = argparse.ArgumentParser()
 ap.add_argument('parameters', help="parameter/header json filename", default=None)
+ap.add_argument('--id', help="can be a specific id name or 'all'", default='all')
 ap.add_argument('-e', '--ecal', help="E-pol cal filename", default=None)
 ap.add_argument('-n', '--ncal', help="N-pol cal filename", default=None)
-ap.add_argument('-#', '--sets_per_pol', help="number of sets per pol per file", default=100)
-ap.add_argument('-i', '--ident', help="can be a specific ident or 'all'", default='all')
+ap.add_argument('-#', '--sets_per_pol', help="number of sets per pol per file", default=10000)
 ap.add_argument('-c', '--comment', help="append a comment", default=None)
-ap.add_argument('-^', '--peak_on', help="Peak on event component (if other than default)", default=None)
 ap.add_argument('-r', '--rawdata', help="csv indices for raw data to keep, or +step ('n' to stop if view)", default='0,-1')
-ap.add_argument('-s', '--show_info', help="show the info for provided filename", action="store_true")
+ap.add_argument('-i', '--info', help="show the info for provided filename", action="store_true")
 ap.add_argument('-v', '--view', help="show plot for provided filename", action="store_true")
-ap.add_argument('-f', '--show_fc', help="csv list of event components to show (if different)", default='all')
+ap.add_argument('--show_fc', help="csv list of feature components to show (if different)", default='all')
+ap.add_argument('--share_freq', help="if you know all spectra have same freq axis, set to True", action="store_true")
+ap.add_argument('--peak_on', help="Peak on event component (if other than default)", default=None)
 ap.add_argument('--view_peaks_ongoing', help="view all peaks in process (diagnostic only!)", action="store_true")
 ap.add_argument('--directory', help="directory for process files and where parameter file lives", default='.')
 ap.add_argument('--threshold_view', help="new threshold for viewing (if possible)", default=None)
@@ -34,7 +35,7 @@ if args.archive_data:
     args.data_only = True
     args.rawdata = '+1'
 if args.data_only and args.rawdata != '+1' and not args.data_only_override:
-    print("Warning:  This will delete the data but not save all of the raw data.")
+    print("Warning:  This will delete the data but not save all of the raw or processed data.")
     raise ValueError("If this is desired then rerun with flag --data_only_override")
 
 args.max_loops = int(args.max_loops)
@@ -59,8 +60,8 @@ if args.threshold_view is not None:
 full_filename = os.path.join(args.directory, args.parameters)
 
 if __name__ == '__main__':
-    r = sp.spectrum_peak.SpectrumPeak(view_ongoing=args.view_peaks_ongoing)
-    if args.show_info:
+    r = sp.spectrum_peak.SpectrumPeak(share_freq=args.share_freq, view_ongoing=args.view_peaks_ongoing)
+    if args.info:
         r.reader(full_filename)
         r.info()
     elif args.view:
@@ -77,7 +78,7 @@ if __name__ == '__main__':
         if args.ncal is not None:
             r.read_cal(args.ncal, 'N')
         r.process_files(directory=args.directory,
-                        ident=args.ident,
+                        ident=args.id,
                         data=args.rawdata,
                         peak_on=args.peak_on,
                         data_only=args.data_only,

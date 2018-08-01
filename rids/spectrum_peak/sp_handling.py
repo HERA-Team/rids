@@ -185,7 +185,7 @@ class SPHandling:
             for i, fs in enumerate(times):
                 x, y = spectrum_peak.spectrum_plotter(freq, getattr(rid.feature_sets[fs], feature_component), None)
                 wf.append(y)
-            plt.imshow(wf, aspect='auto', extent=[freq[0], freq[-1], 0, duration])
+            plt.imshow(wf, aspect='auto', extent=[freq[0], freq[-1], duration, 0])
             plt.xlabel('Freq [{}]'.format(rid.freq_unit))
             plt.ylabel('{} after {}'.format(ts, t0))
             plt.colorbar()

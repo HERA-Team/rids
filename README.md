@@ -29,8 +29,10 @@ Any field may be omitted or missing.
   * timestamp_last:           "     last          "                 "
   * feature_sets:  features etc defined in the feature module
 
+.ridm files are just ascii json files, so use your favorite editor.
+
 I'm trying to do proper unit testing, but so far haven't set it up properly.  Currently,
-`run_ridstests.py` while in the *tests* subdirectory
+`run_ridstests.py` while in the **tests** subdirectory
 
 # SpectrumPeak
 Adds additional attributes and defines the feature_sets.  Redefines reader/writer/info to
@@ -40,7 +42,8 @@ include the additional attributes.  Current scripts are:
 generates spectrum_peak ridz files from spectrum data files.  Includes a few general tools.
 
 * `sphandle.py`
-handles ridz files for display, analysis, etc
+handles ridz files for display, analysis, ... Currently only plots waterfall or stack of raw-data
+from named file
 
 ## To run in a session
 Primarily use scripts, however in a python session

@@ -8,6 +8,7 @@ This module defines the format of the SpectrumPeak feature_sets.
 
 from __future__ import print_function, absolute_import, division
 import os
+import copy
 import numpy as np
 import matplotlib.pyplot as plt
 from .. import rids
@@ -52,6 +53,8 @@ class SpectrumPeak(rids.Rids):
         bw_range:  +/- bw_range (list) that gets searched over (and is then max)
         delta_values:  a dictionary with some default values
     Unit attributes are:
+        freq: can be used for is_spectrum feature_sets if desired
+        freq_unit:
         threshold:  value used to threshold peaks
         threshold_unit: unit of threshold
         vbw:  if spectrum analyzer, video bandwidth
@@ -60,10 +63,10 @@ class SpectrumPeak(rids.Rids):
         rbw_unit:
     """
     sp__direct_attributes = ['peaked_on', 'delta', 'bw_range', 'delta_values', 'fmin', 'fmax', 'feature_module_name']
-    sp__unit_attributes = ['threshold', 'rbw', 'vbw']
+    sp__unit_attributes = ['threshold', 'rbw', 'vbw', 'freq']
     polarizations = ['E', 'N', 'I']
 
-    def __init__(self, comment='', view_ongoing=False):
+    def __init__(self, comment='', share_freq=False, view_ongoing=False):
         # Initialize base attributes
         super(SpectrumPeak, self).__init__(comment)
 
@@ -85,6 +88,7 @@ class SpectrumPeak(rids.Rids):
         self.hipk = None
         self.hipk_bw = None
         self.view_ongoing_features = view_ongoing
+        self.share_freq = share_freq
 
     # Redefine the reader/writer/info base modules
     def reader(self, filename, reset=True):
@@ -130,9 +134,14 @@ class SpectrumPeak(rids.Rids):
             if ftr_fmax > self.fmax:
                 self.fmax = ftr_fmax
             if is_spectrum(fset_tag):
-                if len(spectra[fc].freq) > len(self.feature_sets[fset_name].freq):
+                if self.share_freq:
+                    if self.freq is None:
+                        self.freq = copy.copy(spectra[fc].freq)
+                    self.feature_sets[fset_name].freq = self.freq
+                elif len(spectra[fc].freq) > len(self.feature_sets[fset_name].freq):
                     self.feature_sets[fset_name].freq = spectra[fc].freq
                 setattr(self.feature_sets[fset_name], fc, spectra[fc].val)
+
         self.nsets += 1
         if is_spectrum(fset_tag):
             return
