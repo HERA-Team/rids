@@ -150,7 +150,7 @@ class SPHandling:
         Give a date range to go over to make a reconstituted waterfall plot.
         """
 
-    def raw_data_plot(self, rid, feature_component, plot_type='waterfall', f_range=None, t_range=None):
+    def raw_data_plot(self, rid, feature_component, plot_type='waterfall', f_range=None, t_range=None, legend=False):
         """
         Give a date range to make a waterfall with whatever raw data is in the file
         """
@@ -175,10 +175,12 @@ class SPHandling:
             ts_unit = 'Min'
         if t_range is None:
             t_range = [0, duration]
+        timestep_size = duration / len(times)
 
         # Get freqs
         freq = rid.feature_sets[times[0]].freq  # chose first one
         lfrq = len(freq)
+        chan_size = (freq[-1] - freq[0]) / lfrq
         if f_range is None:
             f_range = [freq[0], freq[-1]]
             lo_chan = 0
@@ -188,11 +190,11 @@ class SPHandling:
             if f_range[0] < freq[0]:
                 lo_chan = 0
             else:
-                lo_chan = int((f_range[0] - freq[0]) / ch)
+                lo_chan = int((f_range[0] - freq[0]) / chan_size)
             if f_range[1] > freq[-1]:
                 hi_chan = -1
             else:
-                hi_chan = int((f_range[1] - freq[0]) / ch)
+                hi_chan = int((f_range[1] - freq[0]) / chan_size)
 
         # Get data
         fadd = []
@@ -224,6 +226,7 @@ class SPHandling:
             print("Had to truncate {} spectra".format(len(ftrunc)))
             print(ftrunc)
 
+        # plot data
         if plot_type == 'waterfall':
             plt.imshow(wf, aspect='auto', extent=[f_range[0], f_range[1], t_range[1], t_range[0]])
             plt.xlabel('Freq [{}]'.format(rid.freq_unit))
@@ -232,14 +235,26 @@ class SPHandling:
         elif plot_type == 'stream':
             time_space = np.linspace(t_range[0], t_range[-1], len(wf))
             num_chan = len(wf[0])
+            numplots = 0
             for i in range(num_chan):
-                plt.plot(time_space, wf[:, i])
+                freq_label = "{:.3f} {}".format(f_range[0] + i * chan_size, rid.freq_unit)
+                plt.plot(time_space, wf[:, i], label=freq_label)
+                numplots += 1
+            print("Number of plots: {}".format(num_plots))
             plt.xlabel('{} after {}'.format(ts_unit, t0))
             plt.ylabel('Power [{}]'.format(rid.val_unit))
+            if legend:
+                plt.legend()
         elif plot_type == 'stack':
             freq_space = np.linspace(f_range[0], f_range[-1], len(wf[0]))
             num_times = len(wf)
+            num_plots = 0
             for i in range(num_times):
+                time_label = "{:.4f} {}".format(i * timestep_size, ts_unit)
                 plt.plot(freq_space, wf[i, :])
+                num_plots += 1
+            print("Number of plots: {}".format(num_plots))
             plt.xlabel('Freq [{}]'.format(rid.freq_unit))
             plt.ylabel('Power [{}]'.format(rid.val_unit))
+            if legend:
+                plt.legend()
