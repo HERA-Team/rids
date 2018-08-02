@@ -14,16 +14,26 @@ ap = argparse.ArgumentParser()
 ap.add_argument('file', help="file(s) to use", default=None)
 ap.add_argument('--rdwf', help="plot raw_data as waterfall in that file ('val', 'maxhold', or 'minhold')", default=None)
 ap.add_argument('--rdstack', help="plot raw_data as stack in that file ('val', 'maxhold', or 'minhold')", default=None)
+ap.add_argument('--rdstream', help="plot raw_data as time streams in that file ('val', 'maxhold, or 'minhold')", default=None)
+ap.add_argument('-f', '--f_range', help="range in freq for 'rd' plots (min,max)", default=None)
+ap.add_argument('-t', '--t_range', help="range in time for 'rd' plots (min,max)", default=None)
 
 args = ap.parse_args()
+
+if args.f_range is not None:
+    args.f_range = [float(x) for x in args.f_range.split(',')]
+
+if args.t_range is not None:
+    args.t_range = [float(x) for x in args.t_range.split(',')]
 
 if __name__ == '__main__':
     r = sp.spectrum_peak.SpectrumPeak()
     r.reader(args.file)
     s = sp.sp_handling.SPHandling()
     if args.rdwf is not None:
-        s.raw_data_plot(r, args.rdwf, plot_type='waterfall')
-        plt.show()
+        s.raw_data_plot(r, args.rdwf, plot_type='waterfall', f_range=args.f_range, t_range=args.t_range)
     if args.rdstack is not None:
-        s.raw_data_plot(r, args.rdstack, plot_type='stack')
-        plt.show()
+        s.raw_data_plot(r, args.rdstack, plot_type='stack', f_range=args.f_range, t_range=args.t_range)
+    if args.rdstream is not None:
+        s.raw_data_plot(r, args.rdstream, plot_type='stream', f_range=args.f_range, t_range=args.t_range)
+    plt.show()

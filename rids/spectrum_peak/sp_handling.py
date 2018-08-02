@@ -150,45 +150,96 @@ class SPHandling:
         Give a date range to go over to make a reconstituted waterfall plot.
         """
 
-    def raw_data_plot(self, rid, feature_component, plot_type='waterfall'):
+    def raw_data_plot(self, rid, feature_component, plot_type='waterfall', f_range=None, t_range=None):
         """
         Give a date range to make a waterfall with whatever raw data is in the file
         """
+        # Get times
         sorted_ftr_keys = sorted(rid.feature_sets.keys())
-        t0 = rid.get_datetime_from_timestamp(sorted_ftr_keys[0].split('.')[1])
-        tn = rid.get_datetime_from_timestamp(sorted_ftr_keys[-1].split('.')[1])
-        print("Data span {} - {}".format(t0, tn))
-        duration = (tn - t0).total_seconds()
-        ts = 'Sec'
-        if duration > 10000.0:
-            duration /= 3600
-            ts = 'Hr'
-        elif duration > 300.0:
-            duration /= 60.0
-            ts = 'Min'
-        freq = None
         times = []
-        fslens = []
         wf = []
         for fs in sorted_ftr_keys:
             if spectrum_peak.is_spectrum(fs):
                 times.append(fs)
-                fslens.append([len(rid.feature_sets[fs].freq), len(getattr(rid.feature_sets[fs], feature_component))])
-                if freq is None or fslens[-1][0] < len(freq):
-                    freq = rid.feature_sets[fs].freq[:]
-                x, y = spectrum_peak.spectrum_plotter(freq, getattr(rid.feature_sets[fs], feature_component), None)
-                if plot_type == 'stack':
-                    plt.plot(x, y)
-                if len(x) < len(freq):
-                    freq = x[:]
+        times = sorted(times)
+        t0 = rid.get_datetime_from_timestamp(times[0].split('.')[1])
+        tn = rid.get_datetime_from_timestamp(times[-1].split('.')[1])
+        print("Data span {} - {}".format(t0, tn))
+        duration = (tn - t0).total_seconds()
+        ts_unit = 'Sec'
+        if duration > 10000.0:
+            duration /= 3600
+            ts_unit = 'Hr'
+        elif duration > 300.0:
+            duration /= 60.0
+            ts_unit = 'Min'
+        if t_range is None:
+            t_range = [0, duration]
+
+        # Get freqs
+        freq = rid.feature_sets[times[0]].freq  # chose first one
+        lfrq = len(freq)
+        if f_range is None:
+            f_range = [freq[0], freq[-1]]
+            lo_chan = 0
+            hi_chan = -1
+        else:
+            ch = (freq[-1] - freq[0]) / lfrq
+            if f_range[0] < freq[0]:
+                lo_chan = 0
+            else:
+                lo_chan = int((f_range[0] - freq[0]) / ch)
+            if f_range[1] > freq[-1]:
+                hi_chan = -1
+            else:
+                hi_chan = int((f_range[1] - freq[0]) / ch)
+
+        # Get data
+        fadd = []
+        ftrunc = []
+        for fs in times:
+            ts = (rid.get_datetime_from_timestamp(fs.split('.')[1]) - t0).total_seconds()
+            if ts_unit == 'Min':
+                ts /= 60.0
+            elif ts_unit == 'Hr':
+                ts /= 3600.0
+            if ts < t_range[0] or ts > t_range[1]:
+                continue
+            x, y = spectrum_peak.spectrum_plotter(rid.feature_sets[fs].freq, getattr(rid.feature_sets[fs], feature_component), None)
+            if len(x) < lfrq:
+                fadd.append(lfrq - len(x))
+                yend = y[-1]
+                for i in range(len(x), lfrq):
+                    y.append(yend)
+            elif len(x) > lfrq:
+                ftrunc.append(len(x) - lfrq)
+                y = y[:lfrq]
+            wf.append(y[lo_chan:hi_chan])
+        wf = np.array(wf)
+
+        if len(fadd):
+            print("Had to add to {} spectra".format(len(fadd)))
+            print(fadd)
+        if len(ftrunc):
+            print("Had to truncate {} spectra".format(len(ftrunc)))
+            print(ftrunc)
+
         if plot_type == 'waterfall':
-            for i, fs in enumerate(times):
-                x, y = spectrum_peak.spectrum_plotter(freq, getattr(rid.feature_sets[fs], feature_component), None)
-                wf.append(y)
-            plt.imshow(wf, aspect='auto', extent=[freq[0], freq[-1], duration, 0])
+            plt.imshow(wf, aspect='auto', extent=[f_range[0], f_range[1], t_range[1], t_range[0]])
             plt.xlabel('Freq [{}]'.format(rid.freq_unit))
-            plt.ylabel('{} after {}'.format(ts, t0))
+            plt.ylabel('{} after {}'.format(ts_unit, t0))
             plt.colorbar()
+        elif plot_type == 'stream':
+            time_space = np.linspace(t_range[0], t_range[-1], len(wf))
+            num_chan = len(wf[0])
+            for i in range(num_chan):
+                plt.plot(time_space, wf[:, i])
+            plt.xlabel('{} after {}'.format(ts_unit, t0))
+            plt.ylabel('Power [{}]'.format(rid.val_unit))
         elif plot_type == 'stack':
+            freq_space = np.linspace(f_range[0], f_range[-1], len(wf[0]))
+            num_times = len(wf)
+            for i in range(num_times):
+                plt.plot(freq_space, wf[i, :])
             plt.xlabel('Freq [{}]'.format(rid.freq_unit))
             plt.ylabel('Power [{}]'.format(rid.val_unit))
