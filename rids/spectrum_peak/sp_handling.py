@@ -150,12 +150,15 @@ class SPHandling:
         Give a date range to go over to make a reconstituted waterfall plot.
         """
 
-    def raw_data_plot(self, rid, feature_component, plot_type='waterfall', f_range=None, t_range=None, legend=False):
+    def raw_data_plot(self, rid, feature_component, plot_type='waterfall', f_range=None, t_range=None, legend=False, keys=None):
         """
-        Give a date range to make a waterfall with whatever raw data is in the file
+        Give a date range to make a waterfall with whatever raw data is in the file, or specific keys
         """
         # Get times
-        sorted_ftr_keys = sorted(rid.feature_sets.keys())
+        if keys is None:
+            sorted_ftr_keys = sorted(rid.feature_sets.keys())
+        else:
+            sorted_ftr_keys = sorted(keys)
         times = []
         wf = []
         for fs in sorted_ftr_keys:
@@ -235,11 +238,11 @@ class SPHandling:
         elif plot_type == 'stream':
             time_space = np.linspace(t_range[0], t_range[-1], len(wf))
             num_chan = len(wf[0])
-            numplots = 0
+            num_plots = 0
             for i in range(num_chan):
                 freq_label = "{:.3f} {}".format(f_range[0] + i * chan_size, rid.freq_unit)
                 plt.plot(time_space, wf[:, i], label=freq_label)
-                numplots += 1
+                num_plots += 1
             print("Number of plots: {}".format(num_plots))
             plt.xlabel('{} after {}'.format(ts_unit, t0))
             plt.ylabel('Power [{}]'.format(rid.val_unit))
@@ -250,8 +253,11 @@ class SPHandling:
             num_times = len(wf)
             num_plots = 0
             for i in range(num_times):
-                time_label = "{:.4f} {}".format(i * timestep_size, ts_unit)
-                plt.plot(freq_space, wf[i, :])
+                if keys is None:
+                    time_label = "{:.4f} {}".format(i * timestep_size, ts_unit)
+                else:
+                    time_label = keys[i]
+                plt.plot(freq_space, wf[i, :], label=time_label)
                 num_plots += 1
             print("Number of plots: {}".format(num_plots))
             plt.xlabel('Freq [{}]'.format(rid.freq_unit))
