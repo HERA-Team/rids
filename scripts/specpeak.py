@@ -66,16 +66,12 @@ if __name__ == '__main__':
         r.reader(full_filename, reset=False)
         r.info()
     elif args.view:
-        r.reader(full_filename, reset=False)
         r.info()
         r.viewer(threshold=args.threshold_view, show_components=args.show_fc, show_data=args.rawdata)
     elif args.show_keys:
-        r.reader(full_filename, reset=False)
         for k in r.feature_sets.keys():
             print(k)
     else:
-        if '.' not in args.parameters:
-            full_filename += '.ridm'
         r.reader(full_filename, reset=False)
         r.append_comment(args.comment)
         if args.ecal is not None:
