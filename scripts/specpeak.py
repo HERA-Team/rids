@@ -29,6 +29,7 @@ ap.add_argument('--max_loops', help="maximum number of iteration loops", default
 ap.add_argument('--data_only', help="flag to only store data and not peaks", action='store_true')
 ap.add_argument('--data_only_override', help="flag to force data_only without saving all", action='store_true')
 ap.add_argument('--archive_data', help="Flag to archive all data (shortcut for data_only=True and rawdata='+1').", action='store_true')
+ap.add_argument('--show_keys', help="Show the feature_set keys", action='store_true')
 
 args = ap.parse_args()
 if args.archive_data:
@@ -68,6 +69,10 @@ if __name__ == '__main__':
         r.reader(full_filename, reset=False)
         r.info()
         r.viewer(threshold=args.threshold_view, show_components=args.show_fc, show_data=args.rawdata)
+    elif args.show_keys:
+        r.reader(full_filename, reset=False)
+        for k in r.feature_sets.keys():
+            print(k)
     else:
         if '.' not in args.parameters:
             full_filename += '.ridm'
