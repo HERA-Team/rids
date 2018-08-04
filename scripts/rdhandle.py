@@ -8,7 +8,7 @@ import argparse
 import os.path
 import matplotlib.pyplot as plt
 
-from rids import spectrum_peak as sp
+from rids import spectrum_peak
 
 ap = argparse.ArgumentParser()
 ap.add_argument('file', help="file(s) to use", default=None)
@@ -32,9 +32,9 @@ if args.keys is not None:
     args.keys = args.keys.split(',')
 
 if __name__ == '__main__':
-    r = sp.spectrum_peak.SpectrumPeak()
+    r = spectrum_peak.spectrum_peak.SpectrumPeak()
     r.reader(args.file)
-    s = sp.sp_handling.SPHandling()
+    s = spectrum_peak.sp_handling.SPHandling()
     if args.wf is not None:
         s.raw_data_plot(r, args.wf, plot_type='waterfall', f_range=args.f_range, t_range=args.t_range, keys=args.keys)
     if args.stack is not None:

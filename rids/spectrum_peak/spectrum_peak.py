@@ -21,10 +21,9 @@ class Spectral:
     """
     Generic spectral class, with the 'basics' initialized.  The other fields may get added
     as appropriate.
-    For now, the order matters for 'spectral_fields' since used to order peak finding priority
+    For now, the order matters for 'spectral_fields' since used to order peak-finding priority
     """
     spectral_fields = ['maxhold', 'minhold', 'val', 'comment', 'polarization', 'freq', 'bw']
-    measured_spectral_fields = ['maxhold', 'minhold', 'val']
 
     def __init__(self, polarization='', comment=''):
         self.comment = comment
@@ -34,9 +33,13 @@ class Spectral:
 
 
 def is_spectrum(tag):
+    """
+    This defines prefix "tags" that denote "spectra" - i.e. meant to be complete spectra
+    and not a subset of features (e.g. peaks in this case)
+    """
     t = tag.lower()
     for s in ['data', 'cal', 'baseline']:
-        if s in t:
+        if t[:len(s)] == s:
             return True
     return False
 
@@ -100,6 +103,7 @@ class SpectrumPeak(rids.Rids):
 
     # Redefine the reader/writer/info base modules
     def reader(self, filename, reset=True):
+        print("Reading {}".format(filename))
         if reset:
             self.reset()
         self._reader(filename, feature_direct=self.sp__direct_attributes,
@@ -121,6 +125,9 @@ class SpectrumPeak(rids.Rids):
         self.__init__(share_freq=self.share_freq, view_ongoing=self.view_ongoing_features)
 
     def read_feature_set_dict(self, fs):
+        """
+        This is used in RIDS parent class for base reader.
+        """
         feature_set = Spectral()
         for v, Y in fs.items():
             if v not in self.feature_components:
@@ -321,7 +328,7 @@ class SpectrumPeak(rids.Rids):
         Parameters:
         ------------
         directory:  directory where files reside and ridz files get written
-        idents:  idents to do.  If 'all' processes all, picking first for overall ident
+        ident:  idents to do.  If 'all' processes all, picking first for overall ident
         data:  indices of events to be saved as data spectra
         peak_on:  feature_component on which to find peaks, default order if None
         data_only:  flag if only saving data and not peaks
