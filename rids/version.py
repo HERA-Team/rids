@@ -59,7 +59,7 @@ MAJOR = _version_major
 MINOR = _version_minor
 MICRO = _version_micro
 VERSION = __version__
-PACKAGES = ['rids', 'rids.spectrum_peak', 'rids.tests']
+PACKAGES = ['rids', 'rids.spectral', 'rids.tests']
 SCRIPTS = [p for p in glob.glob('scripts/*') if not p.endswith('~')]
 # PACKAGE_DATA = {
 #     'hera_mc': [

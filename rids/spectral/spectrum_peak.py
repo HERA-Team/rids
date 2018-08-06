@@ -32,13 +32,13 @@ class Spectral:
         self.val = []
 
 
-def is_spectrum(tag):
+def is_spectrum(tag, prefixes=['data', 'cal', 'baseline']):
     """
     This defines prefix "tags" that denote "spectra" - i.e. meant to be complete spectra
     and not a subset of features (e.g. peaks in this case)
     """
     t = tag.lower()
-    for s in ['data', 'cal', 'baseline']:
+    for s in prefixes:
         if t[:len(s)] == s:
             return True
     return False
@@ -323,7 +323,7 @@ class SpectrumPeak(rids.Rids):
         but just in case)
 
         Format of the spectrum filename (peel_filename below):
-        <path>/identifier.time-stamp.feature_component.polarization
+        identifier.{time-stamp}.feature_component.polarization
 
         Parameters:
         ------------
@@ -489,10 +489,19 @@ def spectrum_plotter(x, y, fmt=None, is_spectrum=False, figure_name=None):
 
 
 def peel_filename(v, fclist=None):
+    if v == 'filename_format_help':
+        s = "The filename format convention is:"
+        s += "\tidentifier.{time-stamp}.feature_component.polarization"
+        s += "\ni.e. x=filename.split(.) has:"
+        s += "\tx[0]:  arbitrary identifier"
+        s += "\tx[...]: time-stamp (may have .'s in it)"
+        s += "\tx[-2]:  feature_component ('maxhold', 'minhold', 'val')"
+        s += "\tx[-1]:  polarization"
+        return s
     if v is None:
         return {}
     s = v.split('/')[-1].split('.')
-    if len(s) not in [4, 5]:  # timestamp may have one '.' in it
+    if len(s) < 4:
         return {}
     fnd = {'ident': s[0]}
     fnd['timestamp'] = '.'.join(s[1:-2])

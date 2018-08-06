@@ -49,7 +49,7 @@ from named file
 Primarily use scripts, however in a python session
 ```
 import rids
-r = rids.spectrum_peak.spectrum_peak.SpectrumPeak()
+r = rids.spectral.spectrum_peak.SpectrumPeak()
 r.reader(<fn>)
 r.info() shows info about file
 r.viewer() will plot per the definition in feature_module
