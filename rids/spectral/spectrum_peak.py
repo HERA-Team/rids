@@ -490,13 +490,13 @@ def spectrum_plotter(x, y, fmt=None, is_spectrum=False, figure_name=None):
 
 def peel_filename(v, fclist=None):
     if v == 'filename_format_help':
-        s = "The filename format convention is:"
-        s += "\tidentifier.{time-stamp}.feature_component.polarization"
-        s += "\ni.e. x=filename.split(.) has:"
-        s += "\tx[0]:  arbitrary identifier"
-        s += "\tx[...]: time-stamp (may have .'s in it)"
-        s += "\tx[-2]:  feature_component ('maxhold', 'minhold', 'val')"
-        s += "\tx[-1]:  polarization"
+        s = "The filename format convention is:\n"
+        s += "\tidentifier.{time-stamp}.feature_component.polarization\n"
+        s += "\ni.e. x=filename.split(.) has:\n"
+        s += "\tx[0]:  arbitrary identifier\n"
+        s += "\tx[...]: time-stamp (may have .'s in it)\n"
+        s += "\tx[-2]:  feature_component ('maxhold', 'minhold', 'val')\n"
+        s += "\tx[-1]:  polarization\n"
         return s
     if v is None:
         return {}
