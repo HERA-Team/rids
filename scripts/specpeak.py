@@ -19,7 +19,7 @@ ap.add_argument('--directory', help="directory for process files and where param
 # parameters used only in script
 ap.add_argument('-i', '--info', help="show the info for provided filename", action="store_true")
 ap.add_argument('-v', '--view', help="show plot for provided filename", action="store_true")
-ap.add_argument('-k', '--show_keys', help="Show the feature_set keys", action='store_true')
+ap.add_argument('-k', '--keys', help="Show the feature_set keys", action='store_true')
 ap.add_argument('--archive_data', help="Flag to archive all data (shortcut for data_only=True and rawdata='+1').", action='store_true')
 ap.add_argument('--data_only_override', help="flag to force data_only without saving all", action='store_true')
 
@@ -30,7 +30,7 @@ ap.add_argument('-r', '--rawdata', help="csv indices for raw data to keep, or +s
 ap.add_argument('--id', help="can be a specific id name or 'all'", default='all')
 ap.add_argument('-#', '--sets_per_pol', help="number of sets per pol per file", default=10000)
 ap.add_argument('-c', '--comment', help="append a comment", default=None)
-ap.add_argument('--share_freq', help="if you know all spectra have same freq axis, set to True", action="store_true")
+ap.add_argument('--share_freq', help="invoke if you know all spectra have same freq axis", action="store_true")
 ap.add_argument('--peak_on', help="Peak on event component (if other than max->min->val)", default=None)
 ap.add_argument('--view_peaks_ongoing', help="view all peaks in process (diagnostic only!)", action="store_true")
 ap.add_argument('--max_loops', help="maximum number of iteration loops", default=1000)
@@ -42,8 +42,11 @@ ap.add_argument('--ncal', help="N-pol cal filename", default=None)
 ap.add_argument('--show_fc', help="csv list of feature components to show (if different)", default='all')
 ap.add_argument('--threshold_view', help="new threshold for viewing (if possible)", default=None)
 
-
 args = ap.parse_args()
+
+if args.rids_filename == 'fnhelp':
+    print(spectral.spectrum_peak.peel_filename(v='filename_format_help'))
+    raise SystemExit
 
 if args.archive_data:
     args.data_only = True
@@ -74,9 +77,6 @@ if args.threshold_view is not None:
 full_filename = os.path.join(args.directory, args.rids_filename)
 
 if __name__ == '__main__':
-    if args.rids_filename == 'fnhelp':
-        print(spectral.spectrum_peak.peel_filename(v='filename_format_help'))
-        raise SystemExit
     r = spectral.spectrum_peak.SpectrumPeak(share_freq=args.share_freq, view_ongoing=args.view_peaks_ongoing)
     r.reader(full_filename, reset=False)
     if args.info:
@@ -84,7 +84,7 @@ if __name__ == '__main__':
     elif args.view:
         r.info()
         r.viewer(threshold=args.threshold_view, show_components=args.show_fc, show_data=args.rawdata)
-    elif args.show_keys:
+    elif args.keys:
         print("  Feature set keys:")
         for k in r.feature_sets.keys():
             print('\t{}'.format(k))
