@@ -202,24 +202,25 @@ class SPHandling:
         # Get data
         fadd = []
         ftrunc = []
-        for fs in times:
-            ts = (rid.get_datetime_from_timestamp(fs.split('.')[1]) - t0).total_seconds()
-            if ts_unit == 'Min':
-                ts /= 60.0
-            elif ts_unit == 'Hr':
-                ts /= 3600.0
-            if ts < t_range[0] or ts > t_range[1]:
-                continue
-            x, y = spectrum_peak.spectrum_plotter(rid.feature_sets[fs].freq, getattr(rid.feature_sets[fs], feature_component), None)
-            if len(x) < lfrq:
-                fadd.append(lfrq - len(x))
-                yend = y[-1]
-                for i in range(len(x), lfrq):
-                    y.append(yend)
-            elif len(x) > lfrq:
-                ftrunc.append(len(x) - lfrq)
-                y = y[:lfrq]
-            wf.append(y[lo_chan:hi_chan])
+        for fc in feature_component:
+            for fs in times:
+                ts = (rid.get_datetime_from_timestamp(fs.split('.')[1]) - t0).total_seconds()
+                if ts_unit == 'Min':
+                    ts /= 60.0
+                elif ts_unit == 'Hr':
+                    ts /= 3600.0
+                if ts < t_range[0] or ts > t_range[1]:
+                    continue
+                x, y = spectrum_peak.spectrum_plotter(rid.feature_sets[fs].freq, getattr(rid.feature_sets[fs], fc), None)
+                if len(x) < lfrq:
+                    fadd.append(lfrq - len(x))
+                    yend = y[-1]
+                    for i in range(len(x), lfrq):
+                        y.append(yend)
+                elif len(x) > lfrq:
+                    ftrunc.append(len(x) - lfrq)
+                    y = y[:lfrq]
+                wf.append(y[lo_chan:hi_chan])
         wf = np.array(wf)
 
         if len(fadd):

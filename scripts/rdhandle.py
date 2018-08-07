@@ -13,8 +13,8 @@ from rids import spectral
 ap = argparse.ArgumentParser()
 ap.add_argument('file', help="file(s) to use", default=None)
 ap.add_argument('--wf', help="plot raw_data as waterfall in that file ('val', 'maxhold', or 'minhold')", default=None)
-ap.add_argument('--stack', help="plot raw_data as stack in that file ('val', 'maxhold', or 'minhold')", default=None)
-ap.add_argument('--stream', help="plot raw_data as time streams in that file ('val', 'maxhold, or 'minhold')", default=None)
+ap.add_argument('--stack', help="plot raw_data as stack in that file ( '' or csv list)", default=None)
+ap.add_argument('--stream', help="plot raw_data as time streams in that file ( '' or csv list)", default=None)
 ap.add_argument('-f', '--f_range', help="range in freq for plots (min,max)", default=None)
 ap.add_argument('-t', '--t_range', help="range in time for plots (min,max)", default=None)
 ap.add_argument('--legend', help="include a legend on stack/stream plots", action='store_true')
@@ -30,6 +30,15 @@ if args.t_range is not None:
 
 if args.keys is not None:
     args.keys = args.keys.split(',')
+
+if args.wf is not None:
+    args.wf = args.wf.split(',')
+
+if args.stack is not None:
+    args.stack = args.stack.split(',')
+
+if args.stream is not None:
+    args.stream = args.stream.split(',')
 
 if __name__ == '__main__':
     r = spectral.spectrum_peak.SpectrumPeak()
