@@ -472,7 +472,7 @@ def spectrum_reader(filename, spec, polarization=None):
 
 def spectrum_plotter(x, y, fmt=None, is_spectrum=False, figure_name=None):
     if not len(x) or not len(y):
-        return
+        return None, None
     if len(x) > len(y):
         _X = x[:len(y)]
         _Y = y[:]

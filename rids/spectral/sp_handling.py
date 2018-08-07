@@ -150,7 +150,7 @@ class SPHandling:
         Give a date range to go over to make a reconstituted waterfall plot.
         """
 
-    def raw_data_plot(self, rid, feature_component, plot_type='waterfall', f_range=None, t_range=None, legend=False, keys=None):
+    def raw_data_plot(self, rid, feature_components, plot_type='waterfall', f_range=None, t_range=None, legend=False, keys=None):
         """
         Give a date range to make a waterfall with whatever raw data is in the file, or specific keys
         """
@@ -202,7 +202,7 @@ class SPHandling:
         # Get data
         fadd = []
         ftrunc = []
-        for fc in feature_component:
+        for fc in feature_components:
             for fs in times:
                 ts = (rid.get_datetime_from_timestamp(fs.split('.')[1]) - t0).total_seconds()
                 if ts_unit == 'Min':
@@ -212,6 +212,8 @@ class SPHandling:
                 if ts < t_range[0] or ts > t_range[1]:
                     continue
                 x, y = spectrum_peak.spectrum_plotter(rid.feature_sets[fs].freq, getattr(rid.feature_sets[fs], fc), None)
+                if x is None:
+                    continue
                 if len(x) < lfrq:
                     fadd.append(lfrq - len(x))
                     yend = y[-1]
@@ -232,6 +234,8 @@ class SPHandling:
 
         # plot data
         if plot_type == 'waterfall':
+            if len(feature_comonents) > 1:
+                print("Warning:  Mixing feature components in a waterfall plot.")
             plt.imshow(wf, aspect='auto', extent=[f_range[0], f_range[1], t_range[1], t_range[0]])
             plt.xlabel('Freq [{}]'.format(rid.freq_unit))
             plt.ylabel('{} after {}'.format(ts_unit, t0))
