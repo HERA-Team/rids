@@ -145,6 +145,7 @@ class SpectrumPeak(rids.Rids):
         fset_name = fset_tag + polarization
         self.feature_sets[fset_name] = Spectral(polarization=polarization)
         self.feature_sets[fset_name].freq = []
+        check_timestamps_for_match = __check_timestamps_for_match(**fnargs)
         spectra = {}
         for fc, sfn in fnargs.items():
             if fc not in self.feature_components or sfn is None:
@@ -167,7 +168,8 @@ class SpectrumPeak(rids.Rids):
                 setattr(self.feature_sets[fset_name], fc, spectra[fc].val)
             if len(spectra[fc].comment):
                 self.feature_sets[fset_name].comment += spectra[fc].comment
-
+            if len(check_timestamps_for_match):
+                self.feature_sets[fset_name].comment += check_timestamps_for_match
         self.nsets += 1
         if is_spectrum(fset_tag):
             return
@@ -193,6 +195,8 @@ class SpectrumPeak(rids.Rids):
         self.feature_sets[fset_name].freq = list(np.array(self.hipk_freq)[self.hipk])
         if len(spectra[fc].comment):
             self.feature_sets[fset_name].comment += spectra[fc].comment
+        if len(check_timestamps_for_match):
+            self.feature_sets[fset_name].comment += check_timestamps_for_match
         for fc, sfn in fnargs.items():
             if sfn is None:
                 continue
@@ -412,6 +416,7 @@ class SpectrumPeak(rids.Rids):
                     if not len(bld):
                         break
                     feature_tag = 'data.{}.'.format(fnd['timestamp'])
+                    print(pol, i, bld)
                     self.get_feature_sets(feature_tag, pol, **bld)
                 # Get the feature_sets, write unless data_only and remove processed files
                 for i in range(num_to_read[pol]):
@@ -515,3 +520,15 @@ def peel_filename(v, fclist=None):
             fnd['feature_component'] = fc
             return fnd
     return {}
+
+
+def __check_timestamps_for_match(**fnargs):
+    list_of = []
+    set_of = set()
+    for fc, sfn in fnargs.items():
+        timestamp = '.'.join(sfn[1:-2])
+        list_of.append(ts)
+        set_of.add(ts)
+    if len(list_of) == len(set_of):
+        return ''
+    return "Timestamps don't match: " + ','.join(sfn.values())
