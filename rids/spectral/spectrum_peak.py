@@ -35,7 +35,7 @@ class Spectral:
 def is_spectrum(tag, prefixes=['data', 'cal', 'baseline']):
     """
     This defines prefix "tags" that denote "spectra" - i.e. meant to be complete spectra
-    and not a subset of features (e.g. peaks in this case)
+    (so plot with lines) and not a subset of features (e.g. peaks in this case, plot with points).
     """
     t = tag.lower()
     for s in prefixes:
@@ -139,7 +139,7 @@ class SpectrumPeak(rids.Rids):
     def get_feature_sets(self, fset_tag, polarization, peak_on=None, **fnargs):
         """
         Get the feature sets for current iteration from individual spectrum files
-        with naming convention as realized in module 'peel_filename' below
+        with naming convention as realized in module '_peel_filename' below
         **fnargs are filenames for self.feature_components {"feature_component": <filename>}
         """
         fset_name = fset_tag + polarization
@@ -153,7 +153,7 @@ class SpectrumPeak(rids.Rids):
             if fc not in self.feature_components or sfn is None:
                 continue
             spectra[fc] = Spectral()
-            spectrum_reader(sfn, spectra[fc], polarization)
+            _spectrum_reader(sfn, spectra[fc], polarization)
             ftr_fmin = min(spectra[fc].freq)
             ftr_fmax = max(spectra[fc].freq)
             if ftr_fmin < self.fmin:
@@ -279,7 +279,7 @@ class SpectrumPeak(rids.Rids):
             for fc in show_components:
                 try:
                     i = show_components.index(fc)
-                    spectrum_plotter(use_freq, getattr(v, fc), fmt=fmt[i], is_spectrum=issp, figure_name=self.rid_file)
+                    _spectrum_plotter(use_freq, getattr(v, fc), fmt=fmt[i], is_spectrum=issp, figure_name=self.rid_file)
                 except AttributeError:
                     pass
             if issp:
@@ -324,7 +324,7 @@ class SpectrumPeak(rids.Rids):
         has run out of appropriate files or the max_loops has been exceeded (unlikely
         but just in case)
 
-        Format of the spectrum filename (peel_filename below):
+        Format of the spectrum filename (_peel_filename below):
         identifier.{time-stamp}.feature_component.polarization
 
         Parameters:
@@ -361,7 +361,7 @@ class SpectrumPeak(rids.Rids):
             for af in available_files:
                 if 'rid' in af.split('.')[-1]:
                     continue
-                fnd = peel_filename(af, self.feature_components)
+                fnd = _peel_filename(af, self.feature_components)
                 if not len(fnd) or\
                         fnd['polarization'] not in self.polarizations or\
                         fnd['feature_component'] not in self.feature_components:
@@ -409,7 +409,7 @@ class SpectrumPeak(rids.Rids):
                     for fc, fcfns in ftrfiles[pol].items():
                         if abs(i) >= len(fcfns) or fcfns[i] is None:
                             continue
-                        fnd = peel_filename(fcfns[i], self.feature_components)
+                        fnd = _peel_filename(fcfns[i], self.feature_components)
                         bld[fc] = fcfns[i]
                     if not len(bld):
                         break
@@ -419,7 +419,7 @@ class SpectrumPeak(rids.Rids):
                 for i in range(num_to_read[pol]):
                     fcd = {}
                     for fc, fcfns in ftrfiles[pol].items():
-                        fnd = peel_filename(fcfns[i], self.feature_components)
+                        fnd = _peel_filename(fcfns[i], self.feature_components)
                         if 'timestamp' in fnd:
                             feature_tag = fnd['timestamp'] + '.'
                         if len(fnd):
@@ -452,7 +452,7 @@ class SpectrumPeak(rids.Rids):
             self.writer(self.filename)
 
 
-def spectrum_reader(filename, spec, polarization=None):
+def _spectrum_reader(filename, spec, polarization=None):
     """
     This reads in an ascii spectrum file.
     """
@@ -470,7 +470,7 @@ def spectrum_reader(filename, spec, polarization=None):
             spec.val.append(data[1])
 
 
-def spectrum_plotter(x, y, fmt=None, is_spectrum=False, figure_name=None):
+def _spectrum_plotter(x, y, fmt=None, is_spectrum=False, figure_name=None):
     if not len(x) or not len(y):
         return None, None
     if len(x) > len(y):
@@ -490,7 +490,7 @@ def spectrum_plotter(x, y, fmt=None, is_spectrum=False, figure_name=None):
         plt.plot(_X, _Y, color=fmt[0], marker=fmt[1], linestyle="None")
 
 
-def peel_filename(v, fclist=None):
+def _peel_filename(v, fclist=None):
     if v == 'filename_format_help':
         s = "The filename format convention is:\n"
         s += "\tidentifier.{time-stamp}.feature_component.polarization\n"
@@ -519,11 +519,19 @@ def peel_filename(v, fclist=None):
     return {}
 
 
+def _get_timestamp_from_ftr_key(fkey):
+    if ':' in fkey:
+        return fkey.split(':')[-2]
+    if '.' in fkey:
+        return fkey.split('.')[-2]
+    return None
+
+
 def _check_timestamps_for_match(**fnargs):
     list_of = []
     set_of = set()
     for fc, sfn in fnargs.items():
-        fnd = peel_filename(sfn)
+        fnd = _peel_filename(sfn)
         if len(fnd):
             ts = fnd['timestamp']
             list_of.append(ts)
