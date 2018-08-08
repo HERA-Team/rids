@@ -29,7 +29,6 @@ class Spectral:
         self.comment = comment
         self.polarization = polarization
         self.freq = []
-        self.val = []
 
 
 def is_spectrum(tag, prefixes=['data', 'cal', 'baseline']):
@@ -460,6 +459,7 @@ def _spectrum_reader(filename, spec, polarization=None):
         return
     if polarization is not None:
         spec.polarization = polarization
+    spec.val = []
     with open(filename, 'r') as f:
         for line in f:
             if line.strip()[0] == ':':
@@ -519,7 +519,7 @@ def _peel_filename(v, fclist=None):
     return {}
 
 
-def _get_timestamp_from_ftr_key(fkey):
+def _get_timestr_from_ftr_key(fkey):
     if ':' in fkey:
         return fkey.split(':')[-2]
     if '.' in fkey:
