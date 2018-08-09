@@ -412,7 +412,7 @@ class SpectrumPeak(rids.Rids):
                         bld[fc] = fcfns[i]
                     if not len(bld):
                         break
-                    feature_tag = 'data.{}.'.format(fnd['timestamp'])
+                    feature_tag = 'data:{}:'.format(fnd['timestamp'])
                     self.get_feature_sets(feature_tag, pol, **bld)
                 # Get the feature_sets, write unless data_only and remove processed files
                 for i in range(num_to_read[pol]):
@@ -420,7 +420,7 @@ class SpectrumPeak(rids.Rids):
                     for fc, fcfns in ftrfiles[pol].items():
                         fnd = _peel_filename(fcfns[i], self.feature_components)
                         if 'timestamp' in fnd:
-                            feature_tag = fnd['timestamp'] + '.'
+                            feature_tag = fnd['timestamp'] + ':'
                         if len(fnd):
                             fcd[fc] = fcfns[i]
                     if not len(fcd):
