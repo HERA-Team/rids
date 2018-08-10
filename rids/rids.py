@@ -1,6 +1,7 @@
 from __future__ import print_function, absolute_import, division
 import json
 import os
+import six
 import gzip
 import copy
 import numpy as np
@@ -51,7 +52,7 @@ class Rids(object):
         self.nsets = 0
         self.feature_sets = None
         # --Other variables--
-        for a, b in diagnose.items():
+        for a, b in six.iteritems(diagnose):
             setattr(self, a, b)
 
     def reset(self):
@@ -112,7 +113,7 @@ class Rids(object):
             r_open = open
         with r_open(filename, 'rb') as f:
             data = json.load(f)
-        for d, val in data.items():
+        for d, val in six.iteritems(data):
             if d == 'comment':
                 self.append_comment(val)
             elif d in self.direct_attributes:
@@ -126,7 +127,7 @@ class Rids(object):
             elif d == 'feature_sets':
                 if self.feature_sets is None:
                     continue
-                for k, fs in val.items():
+                for k, fs in six.iteritems(val):
                     self.feature_sets[k] = self.read_feature_set_dict(fs)
 
     def writer(self, filename, fix_list=True):

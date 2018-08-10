@@ -33,7 +33,6 @@ ap.add_argument('-#', '--sets_per_pol', help="number of sets per pol per file", 
 ap.add_argument('--share_freq', help="invoke if you know all spectra have same freq axis", action="store_true")
 ap.add_argument('--peak_on', help="Peak on event component (if other than max->min->val)", default=None)
 ap.add_argument('--view_peaks_ongoing', help="view all peaks in process (diagnostic only!)", action="store_true")
-ap.add_argument('--max_loops', help="maximum number of iteration loops", default=1000)
 ap.add_argument('--data_only', help="flag to only store data and not peaks", action='store_true')
 ap.add_argument('--ecal', help="E-pol cal filename", default=None)
 ap.add_argument('--ncal', help="N-pol cal filename", default=None)
@@ -43,8 +42,6 @@ ap.add_argument('--show_fc', help="csv list of feature components to show (if di
 ap.add_argument('--threshold_view', help="new threshold for viewing (if possible)", default=None)
 
 args = ap.parse_args()
-print(args.comment)
-raise SystemExit
 if args.rids_filename == 'fnhelp':
     print(spectral.spectrum_peak.peel_filename(v='filename_format_help'))
     raise SystemExit
@@ -56,7 +53,6 @@ if args.data_only and args.rawdata != '+1' and not args.data_only_override:
     print("Warning:  This will delete the data but not save all of the raw or processed data.")
     raise ValueError("If this is desired then rerun as same adding flag --data_only_override")
 
-args.max_loops = int(args.max_loops)
 args.sets_per_pol = int(args.sets_per_pol)
 if args.view:
     if args.rawdata[0].lower() == 'n':
@@ -105,5 +101,4 @@ if __name__ == '__main__':
                         data=args.rawdata,
                         peak_on=args.peak_on,
                         data_only=args.data_only,
-                        sets_per_pol=args.sets_per_pol,
-                        max_loops=args.max_loops)
+                        sets_per_pol=args.sets_per_pol)

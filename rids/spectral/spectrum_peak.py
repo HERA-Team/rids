@@ -9,6 +9,7 @@ This module defines the format of the SpectrumPeak feature_sets.
 from __future__ import print_function, absolute_import, division
 import os
 import copy
+import six
 import numpy as np
 import matplotlib.pyplot as plt
 from .. import rids
@@ -128,7 +129,7 @@ class SpectrumPeak(rids.Rids):
         This is used in RIDS parent class for base reader.
         """
         feature_set = Spectral()
-        for v, Y in fs.items():
+        for v, Y in six.iteritems(fs):
             if v not in self.feature_components:
                 print("Unexpected field {}".format(v))
                 continue
@@ -148,7 +149,7 @@ class SpectrumPeak(rids.Rids):
         if len(check_timestamps_for_match):
             self.feature_sets[fset_name].comment += check_timestamps_for_match
         spectra = {}
-        for fc, sfn in fnargs.items():
+        for fc, sfn in six.iteritems(fnargs):
             if fc not in self.feature_components or sfn is None:
                 continue
             spectra[fc] = Spectral()
@@ -194,7 +195,7 @@ class SpectrumPeak(rids.Rids):
         self.feature_sets[fset_name].freq = list(np.array(self.hipk_freq)[self.hipk])
         if len(spectra[fc].comment):
             self.feature_sets[fset_name].comment += spectra[fc].comment
-        for fc, sfn in fnargs.items():
+        for fc, sfn in six.iteritems(fnargs):
             if sfn is None:
                 continue
             try:
@@ -258,7 +259,7 @@ class SpectrumPeak(rids.Rids):
         line_list = ['-', '--', ':']
         c = 0
         bl = 0
-        for f, v in self.feature_sets.items():
+        for f, v in six.iteritems(self.feature_sets):
             issp = is_spectrum(f)
             if issp and not show_data:
                 continue
@@ -315,13 +316,12 @@ class SpectrumPeak(rids.Rids):
         print("NOT IMPLEMENTED YET: Apply the calibration, if available.")
 
     def process_files(self, directory='.', ident='all', data=[0, -1], peak_on=None,
-                      data_only=False, sets_per_pol=10000, max_loops=1000):
+                      data_only=False, sets_per_pol=10000):
         """
         This is the standard method to process spectrum files in a directory to
         produce ridz files.  The module has an "outer loop" that is meant to handle
-        ongoing file-writing along with file reading.  It will quit when either it
-        has run out of appropriate files or the max_loops has been exceeded (unlikely
-        but just in case)
+        ongoing file-writing along with file reading.  It will quit when it has
+        run out of appropriate files
 
         Format of the spectrum filename (_peel_filename below):
         identifier.{time-stamp}.feature_component.polarization
@@ -334,17 +334,12 @@ class SpectrumPeak(rids.Rids):
         peak_on:  feature_component on which to find peaks, default order if None
         data_only:  flag if only saving data and not peaks
         sets_per_pol:  number of feature_sets per pol per ridz file
-        max_loops:  will stop after this number
         """
         loop = True
-        loop_ctr = 0
         self.ident = None
         self.fmin = 1E9
         self.fmax = -1E9
         while (loop):
-            loop_ctr += 1
-            if loop_ctr > max_loops:
-                break
             # Set up the feature_component file dictionary
             ftrfiles = {}
             max_pol_cnt = {}
@@ -405,7 +400,7 @@ class SpectrumPeak(rids.Rids):
                 # Get the data spectrum files
                 for i in data:
                     bld = {}
-                    for fc, fcfns in ftrfiles[pol].items():
+                    for fc, fcfns in six.iteritems(ftrfiles[pol]):
                         if abs(i) >= len(fcfns) or fcfns[i] is None:
                             continue
                         fnd = _peel_filename(fcfns[i], self.feature_components)
@@ -417,7 +412,7 @@ class SpectrumPeak(rids.Rids):
                 # Get the feature_sets, write unless data_only and remove processed files
                 for i in range(num_to_read[pol]):
                     fcd = {}
-                    for fc, fcfns in ftrfiles[pol].items():
+                    for fc, fcfns in six.iteritems(ftrfiles[pol]):
                         fnd = _peel_filename(fcfns[i], self.feature_components)
                         if 'timestamp' in fnd:
                             feature_tag = fnd['timestamp'] + ':'
@@ -428,7 +423,7 @@ class SpectrumPeak(rids.Rids):
                     if not data_only:
                         self.get_feature_sets(feature_tag, pol, peak_on=peak_on, **fcd)
                     # Delete processed files
-                    for x in fcd.itervalues():
+                    for x in six.itervalues(fcd):
                         if x is not None:
                             os.remove(x)
             # Write the ridz file
@@ -530,7 +525,7 @@ def _get_timestr_from_ftr_key(fkey):
 def _check_timestamps_for_match(**fnargs):
     list_of = []
     set_of = set()
-    for fc, sfn in fnargs.items():
+    for fc, sfn in six.iteritems(fnargs):
         fnd = _peel_filename(sfn)
         if len(fnd):
             ts = fnd['timestamp']
