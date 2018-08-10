@@ -25,11 +25,11 @@ ap.add_argument('--data_only_override', help="flag to force data_only without sa
 
 # parameters used for both generate and view
 ap.add_argument('-r', '--rawdata', help="csv indices for raw data to keep, or +step ('n' to stop if view)", default='0,-1')
+ap.add_argument('-c', '--comment', help="append a comment or includes comments in keys printout if set", nargs='?', const='view', default=None)
 
 # parameters just used for generate
 ap.add_argument('--id', help="can be a specific id name or 'all'", default='all')
 ap.add_argument('-#', '--sets_per_pol', help="number of sets per pol per file", default=10000)
-ap.add_argument('-c', '--comment', help="append a comment", default=None)
 ap.add_argument('--share_freq', help="invoke if you know all spectra have same freq axis", action="store_true")
 ap.add_argument('--peak_on', help="Peak on event component (if other than max->min->val)", default=None)
 ap.add_argument('--view_peaks_ongoing', help="view all peaks in process (diagnostic only!)", action="store_true")
@@ -43,7 +43,8 @@ ap.add_argument('--show_fc', help="csv list of feature components to show (if di
 ap.add_argument('--threshold_view', help="new threshold for viewing (if possible)", default=None)
 
 args = ap.parse_args()
-
+print(args.comment)
+raise SystemExit
 if args.rids_filename == 'fnhelp':
     print(spectral.spectrum_peak.peel_filename(v='filename_format_help'))
     raise SystemExit
@@ -85,9 +86,14 @@ if __name__ == '__main__':
         r.info()
         r.viewer(threshold=args.threshold_view, show_components=args.show_fc, show_data=args.rawdata)
     elif args.keys:
-        print("  Feature set keys:")
+        print("\nFeature set keys:")
         for k in r.feature_sets.keys():
-            print('\t{}'.format(k))
+            if args.comment is None:
+                print("\t{}".format(k))
+            else:
+                print('---{}---'.format(k))
+                if len(r.feature_sets[k].comment):
+                    print('{}'.format(r.feature_sets[k].comment))
     else:
         r.append_comment(args.comment)
         if args.ecal is not None:
