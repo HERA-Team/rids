@@ -35,7 +35,7 @@ if __name__ == '__main__':
         df = np.load(af)
         c = np.zeros(args.num_chan)
         right_num_chan = True
-        for a, v in df.iteritems():
+        for a, v in df.items():
             if a == 'times':
                 continue
             if len(v) != args.num_chan:

@@ -43,7 +43,7 @@ ap.add_argument('--threshold_view', help="new threshold for viewing (if possible
 
 args = ap.parse_args()
 if args.rids_filename == 'fnhelp':
-    print(spectral.spectrum_peak.peel_filename(v='filename_format_help'))
+    print(spectral.spectrum_peak._peel_filename(v='filename_format_help'))
     raise SystemExit
 
 if args.archive_data:
