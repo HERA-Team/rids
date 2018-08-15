@@ -13,7 +13,7 @@ import os.path
 from rids import spectral
 
 ap = argparse.ArgumentParser()
-ap.add_argument('rids_filename', help="rids filename to be generated/viewed (note:  type fnhelp to see format of spectrum filenames)", default=None)
+ap.add_argument('rid_filename', help="rids meta-data filename or filename to be viewed (note:  type fnhelp to see format of spectrum filenames)", default=None)
 ap.add_argument('--directory', help="directory for process files and where parameter/rids file lives", default='.')
 
 # parameters used only in script
@@ -42,7 +42,7 @@ ap.add_argument('--show_fc', help="csv list of feature components to show (if di
 ap.add_argument('--threshold_view', help="new threshold for viewing (if possible)", default=None)
 
 args = ap.parse_args()
-if args.rids_filename == 'fnhelp':
+if args.rid_filename == 'fnhelp':
     print(spectral.spectrum_peak._peel_filename(v='filename_format_help'))
     raise SystemExit
 
@@ -71,7 +71,7 @@ if args.show_fc.lower() != 'all':
     args.show_fc = args.show_fc.split(',')
 if args.threshold_view is not None:
     args.threshold_view = float(args.threshold_view)
-full_filename = os.path.join(args.directory, args.rids_filename)
+full_filename = os.path.join(args.directory, args.rid_filename)
 
 if __name__ == '__main__':
     r = spectral.spectrum_peak.SpectrumPeak(share_freq=args.share_freq, view_ongoing=args.view_peaks_ongoing)

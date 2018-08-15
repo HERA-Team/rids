@@ -73,7 +73,7 @@ feature_component (unless another is specified) and saves the peaks and bandwidt
 
 ## Hopefully helpful musings for SpectrumPeak
 
-So far, the only "feature" set included is SpectrumPeak, with the feature being peaks in a spectrum.  It also can save the raw spectra along with it (as many or as few as you specify).  With the limited amounts of data so far, I have actually just been archiving all of the spectra.  The primary script to generate the files is `specpeak.py`.
+So far, the only "feature" set included is SpectrumPeak, with the feature being peaks in a spectrum.  It also can save the raw spectra along with it (as many or as few as you specify).  With the limited amounts of data so far, I have actually just been archiving all of the spectra.  The primary script to generate the files is `specpeak.py`.  Spectra can be minhold, maxhold, or val (this goes into the filename per below), and it groups these within a feature_set in the written file (sorted by time).
 
 To use in practice, the instrument will write spectra to files with a specified format and filename (other options may be included, but currently only one).  `specpeak.py fnhelp` will display the filename format, reproduced here:
 
@@ -88,19 +88,35 @@ i.e. x=filename.split(.) has:
 	x[-1]:  polarization
 ```
 
-`specpeak.py -h`:
+To archive all data (of any id) in a directory where all data have the same frequencies:
+
+`specpeak.py my_instrument.ridm --archive_data --share_freq`
+
+This will write a .ridz file `id_feature.first_timestamp.n#_featuresets.None.ridz`
+
+You can examine it with the -i, -v or -k specpeak flags.
+
+If you don't want to use the peak stuff to reduce the amount of data saved, but archive every e.g. 100th spectra:
+
+`specpeak.py my_instrument.ridm -r +100`
+
+This uses the default number of feature_sets per pol (currently 10000) and a threshold contained within my_instrument.ridm.
+
+
 ```
+~/rids$ specpeak.py -h
 usage: specpeak.py [-h] [--directory DIRECTORY] [-i] [-v] [-k]
                    [--archive_data] [--data_only_override] [-r RAWDATA]
                    [-c [COMMENT]] [--id ID] [-# SETS_PER_POL] [--share_freq]
                    [--peak_on PEAK_ON] [--view_peaks_ongoing] [--data_only]
                    [--ecal ECAL] [--ncal NCAL] [--show_fc SHOW_FC]
                    [--threshold_view THRESHOLD_VIEW]
-                   rids_filename
+                   rid_filename
 
 positional arguments:
-  rids_filename         rids filename to be generated/viewed (note: type
-                        fnhelp to see format of spectrum filenames)
+  rid_filename          rids meta-data filename or filename to be viewed
+                        (note: type fnhelp to see format of spectrum
+                        filenames)
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -131,5 +147,6 @@ optional arguments:
   --show_fc SHOW_FC     csv list of feature components to show (if different)
   --threshold_view THRESHOLD_VIEW
                         new threshold for viewing (if possible)
+
 
 ```
