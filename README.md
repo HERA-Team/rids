@@ -73,18 +73,18 @@ feature_component (unless another is specified) and saves the peaks and bandwidt
 
 ## Hopefully helpful musings for SpectrumPeak
 
-So far, the only "feature" set included is SpectrumPeak, with the feature being peaks in a spectrum (and includes a bandwidth).  It also can save the raw spectra along with it (as many or as few as you specify).  With the limited amounts of data so far, I have actually just been archiving all of the spectra.  The primary script to generate the files is `specpeak.py`.  Spectra can be 'minhold', 'maxhold', or 'val' (this goes into the filename per below), and it groups these within a 'feature_set' in the written file (sorted by time).
+So far, the only "feature" set included is `SpectrumPeak`, with the feature being peaks in a spectrum (and includes a bandwidth).  It also can save the raw spectra along with it (as many or as few as you specify).  With the limited amount of data so far, I have actually just been archiving all of the spectra.  The primary script to generate the files is `specpeak.py`.  Spectra can be 'minhold', 'maxhold', or 'val' (this goes into the filename per below), and it groups these within a 'feature_set' in the written file (sorted by time).
 
-To use in practice, the instrument will write spectra to files with a specified format and filename (other options may be included, but currently only one) and then you'll run the script to process the files in that directory.  NOTE/WARNING:  it deletes files as it goes.  `specpeak.py fnhelp` will display the filename format, reproduced here:
+To use in practice, the instrument will write spectra to files with a specified format and filename (other options may be included, but currently only one) and then you'll run the script to process the files in that directory.  [NOTE/WARNING:  it deletes files as it goes.]  `specpeak.py fnhelp` will display the filename format, reproduced here:
 
 ```
 The filename format convention is:
 	identifier.{time-stamp}.feature_component.polarization
 
 i.e. x=filename.split(.) has:
-	x[0]:  arbitrary identifier
+	x[0]:  arbitrary identifier (no .'s may be in it)
 	x[...]: time-stamp (may have .'s in it)
-	x[-2]:  feature_component ('maxhold', 'minhold', 'val')
+	x[-2]:  feature_component (currently one of 'maxhold', 'minhold', 'val')
 	x[-1]:  polarization
 ```
 
@@ -94,7 +94,7 @@ To archive all data (of any id) in a directory where all data have the same freq
 
 This will write a .ridz file `id_feature.first_timestamp.n#_featuresets.None.ridz`
 
-You can examine it with the -i, -v or -k specpeak flags.
+You can examine it with the `-i`, `-v` or `-k` specpeak flags.
 
 If you want to use the peak stuff to reduce the amount of data saved, but archive every e.g. 100th spectra:
 
