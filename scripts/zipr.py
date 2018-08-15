@@ -8,7 +8,7 @@ import argparse
 import gzip
 
 ap = argparse.ArgumentParser()
-ap.add_argument('file', help="file(s) to use", default=None)
+ap.add_argument('file', help="fil to convert", default=None)
 ap.add_argument('-d', '--delete', help="Set flag to delete other version of file.", action='store_true')
 
 args = ap.parse_args()
