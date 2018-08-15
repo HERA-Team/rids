@@ -3,7 +3,7 @@ Reads/writes .ridm/.ridz files, JSON files with fields as described below.
 Timestamps should be sortable to increasing time (can fix this later if desired...).
 
 The thought behind rids was that we would be generating a lot of data that we would:
-	* want to store sensibly and 
+	* want to store sensibly and
 	* maybe not store it all, but store desired “features”.
 
 The user is encouraging to think about/define/implement additional features or file formats or etc
@@ -38,7 +38,8 @@ Any field may be omitted or missing.
 File "types" are shown below (the quotes are because they are all the same json structure, just different intents)
   * .ridm files are ascii json files, so use your favorite editor.  They are meant to hold the header or meta data of the instrument (so small amount of specific content).
   * .rids files are ascii json files, so can use your favorite editor.  They are meant to hold a data set (with header/meta info)
-  * .ridz files are gzipped .rids files that are intended to hold a bunch of data.  If you want to view them with an editor, cp or mv them to a .gz filename, then gunzip them and view with editor.  (I'll write a script for this.)
+  * .ridz files are gzipped .rids files that are intended to hold a bunch of data.  If you want to view them with an editor, cp or mv them to a .gz filename, then gunzip them and view with editor.
+	The script `zipr.py` can convert between zipped and unzipped file.
 
 
 I'm trying to do proper unit testing, but so far haven't set it up properly.  Currently,
