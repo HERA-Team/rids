@@ -32,16 +32,13 @@ class Spectral:
         self.freq = []
 
 
-def is_spectrum(tag, prefixes=['data', 'cal', 'baseline']):
+def is_spectrum(tag, prefixes=('data', 'cal', 'baseline')):
     """
     This defines prefix "tags" that denote "spectra" - i.e. meant to be complete spectra
     (so plot with lines) and not a subset of features (e.g. peaks in this case, plot with points).
     """
     t = tag.lower()
-    for s in prefixes:
-        if t[:len(s)] == s:
-            return True
-    return False
+    return t.startswith(prefixes)
 
 
 class SpectrumPeak(rids.Rids):
