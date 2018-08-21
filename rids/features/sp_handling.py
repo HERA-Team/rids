@@ -67,10 +67,12 @@ class SPHandling:
                                                             self.reconstituted_info.dfill))
             elif self.reconstituted_info.dfill == 'feature_set_min':
                 self.reconstituted_info.dfill = 1E9
-                for mf in rid.feature_sets[feature_key].measured_spectral_fields:
+                for mf in rid.feature_sets[feature_key].spectral_fields:
                     try:
                         v = min(getattr(rid.feature_sets[feature_key], mf))
                     except AttributeError:
+                        continue
+                    except ValueError:
                         continue
                     if v < self.reconstituted_info.dfill:
                         self.reconstituted_info.dfill = v

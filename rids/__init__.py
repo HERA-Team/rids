@@ -4,5 +4,5 @@
 
 from .version import __version__
 from . import rids
-from . import spectral
+from . import features
 from . import tests

@@ -4,15 +4,15 @@
 
 from __future__ import print_function, division, absolute_import
 
-from .. import spectral
+from .. import features
 import matplotlib.pyplot as plt
 
 
 def test_reconstitute_params():
-    rid = spectral.spectrum_peak.SpectrumPeak()
+    rid = features.spectrum_peak.SpectrumPeak()
     rid.reader('sa_Spectrum_Peak.20180526-1033.n40.maxT-20.ridz')
     fs = '20180527-0116.E'
-    rcf = spectral.sp_handling.SPHandling()
+    rcf = features.sp_handling.SPHandling()
     fc2use = 'maxhold'
 
     print("<defaults>")
@@ -34,9 +34,9 @@ def test_reconstitute_params():
 
 
 def test_reconstitute_features():
-    rid = spectral.spectrum_peak.SpectrumPeak()
+    rid = features.spectrum_peak.SpectrumPeak()
     rid.reader('sa_Spectrum_Peak.20180526-1033.n40.maxT-20.ridz')
-    rcf = spectral.sp_handling.SPHandling()
+    rcf = features.sp_handling.SPHandling()
     fs = '20180526-1033.E'
     fc2use = 'maxhold'
     rcf.reconstitute_features(rid, fs, fc2use, dfill='component_min')

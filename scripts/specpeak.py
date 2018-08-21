@@ -10,7 +10,7 @@ from __future__ import print_function, division, absolute_import
 import argparse
 import os.path
 
-from rids import spectral
+from rids import features
 
 ap = argparse.ArgumentParser()
 ap.add_argument('rid_filename', help="rids meta-data filename or filename to be viewed (note:  type fnhelp to see format of spectrum filenames)", default=None)
@@ -43,7 +43,7 @@ ap.add_argument('--threshold_view', help="new threshold for viewing (if possible
 
 args = ap.parse_args()
 if args.rid_filename == 'fnhelp':
-    print(spectral.spectrum_peak._peel_filename(v='filename_format_help'))
+    print(features.spectrum_peak._peel_filename(v='filename_format_help'))
     raise SystemExit
 
 if args.archive_data:
@@ -74,7 +74,7 @@ if args.threshold_view is not None:
 full_filename = os.path.join(args.directory, args.rid_filename)
 
 if __name__ == '__main__':
-    r = spectral.spectrum_peak.SpectrumPeak(share_freq=args.share_freq, view_ongoing=args.view_peaks_ongoing)
+    r = features.spectrum_peak.SpectrumPeak(share_freq=args.share_freq, view_ongoing=args.view_peaks_ongoing)
     r.reader(full_filename, reset=False)
     if args.info:
         r.info()
