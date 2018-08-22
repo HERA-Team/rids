@@ -32,6 +32,53 @@ class Spectral:
         self.freq = []
 
 
+class FileSet:
+    """
+    Class used to generate the feature_set function group by id
+    and act on it (chunk it, etc)
+    """
+
+    def __init__(self, id):
+        self.id = id
+        # Each of these below is per polarization
+        self.timestamps = {}
+        # ...for clarity, manually set feature_components from subset of spectral_fields above
+        self.maxhold = {}
+        self.minhold = {}
+        self.val = {}
+        self.included_feature_components = set()
+
+    def timestamp_limits(self):
+        tsplim = []
+        for pol in self.timestamps:
+            tssort = sorted(self.timestamps[pol])
+            tsplim.append(tssort[0])
+            tsplim.append(tssort[-1])
+        tslim = sorted(tsplim)
+        return tslim[0], tslim[-1]
+
+    def chunk_timestamps(self, chunk_size):
+        self.chunked = {}
+        self.chunk_size = {}
+        self.biggest_pol = {'pol': '-', 'len': -1, 'size': -1}
+        for pol in self.timestamps:
+            self.chunk_size[pol] = 0
+            self.chunked[pol] = []
+            chunk = []
+            for i, ts in enumerate(sorted(self.timestamps[pol])):
+                if i and not i % chunk_size:
+                    self.chunked[pol].append(chunk)
+                    chunk = []
+                chunk.append(ts)
+                self.chunk_size[pol] += 1
+            if len(chunk):
+                self.chunked[pol].append(chunk)
+            if self.chunk_size[pol] > self.biggest_pol['size']:
+                self.biggest_pol['pol'] = pol
+                self.biggest_pol['len'] = len(self.chunked[pol])
+                self.biggest_pol['size'] = self.chunk_size[pol]
+
+
 def is_spectrum(tag, prefixes=('data', 'cal', 'baseline')):
     """
     This defines prefix "tags" that denote "spectra" - i.e. meant to be complete spectra
@@ -326,74 +373,91 @@ class SpectrumPeak(rids.Rids):
         Parameters:
         ------------
         directory:  directory where files reside and ridz files get written
-        ident:  idents to do.  If 'all' processes all, picking first for overall ident
+        ident:  idents to do.  If 'all' processes all
         data:  indices of events to be saved as data spectra
         peak_on:  feature_component on which to find peaks, default order if None
         data_only:  flag if only saving data and not peaks
-        sets_per_pol:  number of feature_sets per pol per ridz file
+        sets_per_pol:  number of feature_sets per pol per ridz file (i.e. number of timestamps/pol/file)
         """
-        loop = True
-        self.ident = None
-        self.fmin = 1E9
-        self.fmax = -1E9
-        while (loop):
-            # Set up the feature_component file dictionary
-            ftrfiles = {}
-            max_pol_cnt = {}
-            for pol in self.polarizations:
-                ftrfiles[pol] = {}
-                max_pol_cnt[pol] = 0
-                for fc in self.feature_components:
-                    ftrfiles[pol][fc] = []
-            # Go through and sort the available files into file dictionary
-            loop = False
-            available_files = sorted(os.listdir(directory))
-            file_times = []
-            for af in available_files:
-                if 'rid' in af.split('.')[-1]:
-                    continue
-                fnd = _peel_filename(af, self.feature_components)
-                if not len(fnd) or\
-                        fnd['polarization'] not in self.polarizations or\
-                        fnd['feature_component'] not in self.feature_components:
-                    continue
+
+        # Get meta-data for filename
+        th_for_fn = ''
+        if self.threshold is not None:
+            th_for_fn = self.threshold
+            if abs(self.threshold) < 1.0:
+                th_for_fn *= 100.0
+            th_for_fn = 'T{:.0f}'.format(th_for_fn)
+        if self.peaked_on is not None:
+            pk_for_fn = self.peaked_on[:3]
+        else:
+            pk_for_fn = 'None'
+            th_for_fn = ''
+        num_for_fn = 'n{}'.format(sets_per_pol)
+
+        # Get file_idp FileSet of files to do
+        file_idp = {}  # keyed set of classes for file-sets
+        for af in sorted(os.listdir(directory)):
+            if 'rid' in af.split('.')[-1]:
+                continue
+            fnd = _peel_filename(af, self.feature_components)
+            if not len(fnd) or\
+                    fnd['polarization'] not in self.polarizations or\
+                    fnd['feature_component'] not in self.feature_components:
+                continue
+            use_it = False
+            if isinstance(ident, six.string_types):
+                if ident == 'all' or fnd['ident'] == ident:
+                    use_it = True
+            elif isinstance(ident, list) and fnd['ident'] in ident:
+                use_it = True
+            if use_it:
+                idkey = fnd['ident']
                 pol = fnd['polarization']
                 feco = fnd['feature_component']
-                if ident == 'all' or ident == fnd['ident']:
-                    loop = True
-                    if len(ftrfiles[pol][feco]) > sets_per_pol:
-                        continue
-                    file_times.append(fnd['timestamp'])
-                    ftrfiles[pol][feco].append(os.path.join(directory, af))
-                    if self.ident is None:
-                        self.ident = fnd['ident']
-            if self.ident not in self.delta_values:
+                file_idp[idkey].included_feature_components.add(feco)
+                if idkey not in file_idp:
+                    file_idp[idkey] = FileSet(fnd['ident'])
+                if pol not in file_idp[idkey].timestamps:
+                    file_idp[idkey].timestamps[pol] = set()
+                file_idp[idkey].timestamps[pol].add(fnd['timestamp'])
+                if pol not in getattr(file_idp[idkey], feco):
+                    getattr(file_idp[idkey], feco)[pol] = {}
+                getattr(file_idp[idkey], feco)[fnd['timestamp']] = af
+
+        for idkey in file_idp:
+            #  This is the start of one id
+            if file_idp[idkey].id not in self.delta_values:
                 self.delta = 0.1
             else:
-                self.delta = self.delta_values[self.ident]
-            if not loop:
-                break
-            # Go through and count the sorted available files
-            num_to_read = {}
-            for pol in ftrfiles:
-                for fc in ftrfiles[pol]:
-                    if len(ftrfiles[pol][fc]) > max_pol_cnt[pol]:
-                        max_pol_cnt[pol] = len(ftrfiles[pol][fc])
-                for fc in ftrfiles[pol]:
-                    diff_len = max_pol_cnt[pol] - len(ftrfiles[pol][fc])
-                    if diff_len > 0:
-                        ftrfiles[pol][fc] = ftrfiles[pol][fc] + [None] * diff_len
-                    num_to_read[pol] = len(ftrfiles[pol][fc])  # Yes, does get reset many times
-            file_times = sorted(file_times)
-            self.timestamp_first = file_times[0]
-            self.timestamp_last = file_times[-1]
-            # Process the files
-            self.feature_sets = {}
-            self.nsets = 0
-            for pol in self.polarizations:
-                if not max_pol_cnt[pol]:
-                    continue
-                processed_pol_data = []
+                self.delta = self.delta_values[file_idp[idkey].id]
+            file_idp[idkey].chunk_timestamps(sets_per_pol)
+            bp = file_idp[idkey].biggest_pol
+
+            for i in range(bp['len']):
+                # This is start of one file
+                self.fmin = 1E9
+                self.fmax = -1E9
+                self.timestamp_first, self.timestamp_last = file_idp[idkey].timestamp_limits()
+                self.feature_sets = {}
+                fs_ctr = 0
+                for pol in file_idp[idkey]['chunked']:
+                    try:
+                        chunk_ts_list = file_idp[idkey]['chunked'][pol][i]
+                    except IndexError:
+                        chunk_ts_list = []
+                    # This is the start of one feature_set
+                    for ts in chunk_ts_list:
+                        fs_ctr += 1
+                        for feco in file_idp[idkey].included_feature_components:
+                            fnargs = {}
+                            try:
+                                fnargs[feco] = os.path.join(directory, getattr(file_idp[idkey], feco)[pol][ts])
+                            except KeyError:
+                                fnargs[feco] = None
+
+feature_tag = 'data:{}:'.format(fnd['timestamp'])
+self.get_feature_sets(feature_tag, pol, **bld)
+
                 # Get the data spectrum files
                 for i in data:
                     bld = {}
@@ -404,8 +468,8 @@ class SpectrumPeak(rids.Rids):
                         bld[fc] = fcfns[i]
                     if not len(bld):
                         break
-                    feature_tag = 'data:{}:'.format(fnd['timestamp'])
-                    self.get_feature_sets(feature_tag, pol, **bld)
+
+
                 # Get the feature_sets, write unless data_only and remove processed files
                 for i in range(num_to_read[pol]):
                     fcd = {}
@@ -423,24 +487,22 @@ class SpectrumPeak(rids.Rids):
                     for x in six.itervalues(fcd):
                         if x is not None:
                             os.remove(x)
-            # Write the ridz file
-            if self.threshold is not None:
-                th = self.threshold
-                if abs(self.threshold) < 1.0:
-                    th *= 100.0
-                th = 'T{:.0f}'.format(th)
-            else:
-                th = ''
-            if self.peaked_on is not None:
-                pk = self.peaked_on[:3]
-            else:
-                pk = 'None'
-                th = ''
-            fn = "{}_{}.{}.n{}.{}{}.ridz".format(self.ident, self.feature_module_name,
-                                                 self.timestamp_first, self.nsets,
-                                                 pk, th)
-            self.filename = os.path.join(directory, fn)
-            self.writer(self.filename)
+                # Write the ridz file
+
+                fn = "{}_{}.{}.n{}.{}{}.ridz".format(self.ident, self.feature_module_name,
+                                                     self.timestamp_first, self.nsets,
+                                                     pk, th)
+                self.filename = os.path.join(directory, fn)
+                self.writer(self.filename)
+
+
+def _empty_ftrfiles_dict(pol, feco):
+    ftrfiles = {}
+    for p in pol:
+        ftrfiles[p] = {}
+        for fc in feco:
+            ftrfiles[p][fc] = []
+    return ftrfiles
 
 
 def _spectrum_reader(filename, spec, polarization=None):
@@ -497,7 +559,7 @@ def _peel_filename(v, fclist=None):
     s = v.split('/')[-1].split('.')
     if len(s) < 4:
         return {}
-    fnd = {'ident': s[0]}
+    fnd = {'filename': v, 'ident': s[0]}
     fnd['timestamp'] = '.'.join(s[1:-2])
     fnd['feature_component'] = s[-2].lower()
     fnd['polarization'] = s[-1].upper()
