@@ -48,16 +48,7 @@ class FileSet:
         self.val = {}
         self.included_feature_components = set()
 
-    def timestamp_limits(self):
-        tsplim = []
-        for pol in self.timestamps:
-            tssort = sorted(self.timestamps[pol])
-            tsplim.append(tssort[0])
-            tsplim.append(tssort[-1])
-        tslim = sorted(tsplim)
-        return tslim[0], tslim[-1]
-
-    def chunk_timestamps(self, chunk_size):
+    def chunk_it(self, chunk_size):
         self.chunked = {}
         self.chunk_size = {}
         self.biggest_pol = {'pol': '-', 'len': -1, 'size': -1}
@@ -77,6 +68,14 @@ class FileSet:
                 self.biggest_pol['pol'] = pol
                 self.biggest_pol['len'] = len(self.chunked[pol])
                 self.biggest_pol['size'] = self.chunk_size[pol]
+        self.chunked_time_limits = []
+        for i in range(self.biggest_pol['len']):
+            cts = []
+            for p in self.chunked:
+                cts.append(self.chunked[p][i][0])
+                cts.append(self.chunked[p][i][-1])
+            cts = sorted(cts)
+            self.chunked_time_limits.append([cts[0], cts[-1]])
 
 
 def is_spectrum(tag, prefixes=('data', 'cal', 'baseline')):
@@ -144,6 +143,7 @@ class SpectrumPeak(rids.Rids):
         self.hipk_bw = None
         self.view_ongoing_features = view_ongoing
         self.share_freq = share_freq
+        self.cal_files_present = False
 
     # Redefine the reader/writer/info base modules
     def reader(self, filename, reset=True):
@@ -180,7 +180,7 @@ class SpectrumPeak(rids.Rids):
             setattr(feature_set, v, Y)
         return feature_set
 
-    def get_feature_sets(self, fset_tag, polarization, peak_on=None, **fnargs):
+    def get_feature_set_from_files(self, fset_tag, polarization, peak_on=None, **fnargs):
         """
         Get the feature sets for current iteration from individual spectrum files
         with naming convention as realized in module '_peel_filename' below
@@ -189,9 +189,10 @@ class SpectrumPeak(rids.Rids):
         fset_name = fset_tag + polarization
         self.feature_sets[fset_name] = Spectral(polarization=polarization)
         self.feature_sets[fset_name].freq = []
-        check_timestamps_for_match = _check_timestamps_for_match(**fnargs)
-        if len(check_timestamps_for_match):
-            self.feature_sets[fset_name].comment += check_timestamps_for_match
+        if len(fnargs) > 1:
+            check_timestamps_for_match = _check_timestamps_for_match(**fnargs)
+            if len(check_timestamps_for_match):
+                self.feature_sets[fset_name].comment += check_timestamps_for_match
         spectra = {}
         for fc, sfn in six.iteritems(fnargs):
             if fc not in self.feature_components or sfn is None:
@@ -354,13 +355,14 @@ class SpectrumPeak(rids.Rids):
 
     def read_cal(self, filename, polarization):
         tag = 'cal.' + filename + '.'
-        self.get_feature_sets(tag, polarization, val=filename)
+        self.cal_files_present = True
+        self.get_feature_set_from_files(tag, polarization, val=filename)
 
     def apply_cal(self):
         print("NOT IMPLEMENTED YET: Apply the calibration, if available.")
 
     def process_files(self, directory='.', ident='all', data=[0, -1], peak_on=None,
-                      data_only=False, sets_per_pol=10000):
+                      data_only=False, sets_per_pol=10000, keep_data=False):
         """
         This is the standard method to process spectrum files in a directory to
         produce ridz files.  The module has an "outer loop" that is meant to handle
@@ -378,9 +380,9 @@ class SpectrumPeak(rids.Rids):
         peak_on:  feature_component on which to find peaks, default order if None
         data_only:  flag if only saving data and not peaks
         sets_per_pol:  number of feature_sets per pol per ridz file (i.e. number of timestamps/pol/file)
+        keep_data:  if False (default) it will delete the processed files, otherwise it will keep
         """
-
-        # Get meta-data for filename
+        # Get overall meta-data for filename
         th_for_fn = ''
         if self.threshold is not None:
             th_for_fn = self.threshold
@@ -392,7 +394,6 @@ class SpectrumPeak(rids.Rids):
         else:
             pk_for_fn = 'None'
             th_for_fn = ''
-        num_for_fn = 'n{}'.format(sets_per_pol)
 
         # Get file_idp FileSet of files to do
         file_idp = {}  # keyed set of classes for file-sets
@@ -414,95 +415,80 @@ class SpectrumPeak(rids.Rids):
                 idkey = fnd['ident']
                 pol = fnd['polarization']
                 feco = fnd['feature_component']
-                file_idp[idkey].included_feature_components.add(feco)
                 if idkey not in file_idp:
                     file_idp[idkey] = FileSet(fnd['ident'])
+                file_idp[idkey].included_feature_components.add(feco)
                 if pol not in file_idp[idkey].timestamps:
                     file_idp[idkey].timestamps[pol] = set()
                 file_idp[idkey].timestamps[pol].add(fnd['timestamp'])
                 if pol not in getattr(file_idp[idkey], feco):
                     getattr(file_idp[idkey], feco)[pol] = {}
-                getattr(file_idp[idkey], feco)[fnd['timestamp']] = af
+                getattr(file_idp[idkey], feco)[pol][fnd['timestamp']] = af
 
+        # Now process that dictionary
         for idkey in file_idp:
             #  This is the start of one id
             if file_idp[idkey].id not in self.delta_values:
                 self.delta = 0.1
             else:
                 self.delta = self.delta_values[file_idp[idkey].id]
-            file_idp[idkey].chunk_timestamps(sets_per_pol)
+            file_idp[idkey].chunk_it(sets_per_pol)
             bp = file_idp[idkey].biggest_pol
 
             for i in range(bp['len']):
                 # This is start of one file
                 self.fmin = 1E9
                 self.fmax = -1E9
-                self.timestamp_first, self.timestamp_last = file_idp[idkey].timestamp_limits()
-                self.feature_sets = {}
-                fs_ctr = 0
-                for pol in file_idp[idkey]['chunked']:
+                self.timestamp_first, self.timestamp_last = file_idp[idkey].chunked_time_limits[i][0], file_idp[idkey].chunked_time_limits[i][-1]
+                if self.cal_files_present:
+                    print("NOT IMPLEMENTED.  Need to rewrite the cal files.")
+                self.feature_sets = {}  # Reset the features sets for new file.
+                self.nsets = 0
+                files_this_pass = set()
+                for pol in file_idp[idkey].chunked:
                     try:
-                        chunk_ts_list = file_idp[idkey]['chunked'][pol][i]
+                        chunk_ts_list = file_idp[idkey].chunked[pol][i]
                     except IndexError:
                         chunk_ts_list = []
                     # This is the start of one feature_set
-                    for ts in chunk_ts_list:
-                        fs_ctr += 1
+                    # ... get data spectrum files
+                    for j in data:
+                        try:
+                            ts = chunk_ts_list[j]
+                        except IndexError:
+                            break
                         for feco in file_idp[idkey].included_feature_components:
                             fnargs = {}
                             try:
                                 fnargs[feco] = os.path.join(directory, getattr(file_idp[idkey], feco)[pol][ts])
+                                files_this_pass.add(fnargs[feco])
                             except KeyError:
-                                fnargs[feco] = None
-
-feature_tag = 'data:{}:'.format(fnd['timestamp'])
-self.get_feature_sets(feature_tag, pol, **bld)
-
-                # Get the data spectrum files
-                for i in data:
-                    bld = {}
-                    for fc, fcfns in six.iteritems(ftrfiles[pol]):
-                        if abs(i) >= len(fcfns) or fcfns[i] is None:
-                            continue
-                        fnd = _peel_filename(fcfns[i], self.feature_components)
-                        bld[fc] = fcfns[i]
-                    if not len(bld):
-                        break
-
-
-                # Get the feature_sets, write unless data_only and remove processed files
-                for i in range(num_to_read[pol]):
-                    fcd = {}
-                    for fc, fcfns in six.iteritems(ftrfiles[pol]):
-                        fnd = _peel_filename(fcfns[i], self.feature_components)
-                        if 'timestamp' in fnd:
-                            feature_tag = fnd['timestamp'] + ':'
-                        if len(fnd):
-                            fcd[fc] = fcfns[i]
-                    if not len(fcd):
-                        continue
+                                continue
+                        if len(fnargs):
+                            feature_tag = 'data:{}:'.format(ts)
+                            self.get_feature_set_from_files(feature_tag, pol, **fnargs)
                     if not data_only:
-                        self.get_feature_sets(feature_tag, pol, peak_on=peak_on, **fcd)
-                    # Delete processed files
-                    for x in six.itervalues(fcd):
-                        if x is not None:
-                            os.remove(x)
+                        # ... get feature_sets
+                        for ts in chunk_ts_list:
+                            for feco in file_idp[idkey].included_feature_components:
+                                fnargs = {}
+                                try:
+                                    fnargs[feco] = os.path.join(directory, getattr(file_idp[idkey], feco)[pol][ts])
+                                    files_this_pass.add(fnargs[feco])
+                                except KeyError:
+                                    continue
+                            if len(fnargs):
+                                feature_tag = '{}:'.format(ts)
+                                self.get_feature_set_from_files(feature_tag, pol, peak_on=peak_on, **fnargs)
+                if not keep_data:
+                    # ... delete processed files
+                    for x in files_this_pass:
+                        os.remove(x)
                 # Write the ridz file
-
-                fn = "{}_{}.{}.n{}.{}{}.ridz".format(self.ident, self.feature_module_name,
-                                                     self.timestamp_first, self.nsets,
-                                                     pk, th)
-                self.filename = os.path.join(directory, fn)
-                self.writer(self.filename)
-
-
-def _empty_ftrfiles_dict(pol, feco):
-    ftrfiles = {}
-    for p in pol:
-        ftrfiles[p] = {}
-        for fc in feco:
-            ftrfiles[p][fc] = []
-    return ftrfiles
+                fn = "{}_{}.{}.n{}.{}{}.ridz".format(idkey, self.feature_module_name, self.timestamp_first,
+                                                     self.nsets, pk_for_fn, th_for_fn)
+                filename = os.path.join(directory, fn)
+                self.writer(filename)
 
 
 def _spectrum_reader(filename, spec, polarization=None):

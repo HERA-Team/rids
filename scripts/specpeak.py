@@ -29,6 +29,7 @@ ap.add_argument('-c', '--comment', help="append a comment or includes comments i
 
 # parameters just used for generate
 ap.add_argument('--id', help="can be a specific id name or 'all'", default='all')
+ap.add_argument('--keep_data', help="keep data after processing", action='store_true')
 ap.add_argument('-#', '--sets_per_pol', help="number of sets per pol per file", default=10000)
 ap.add_argument('--share_freq', help="invoke if you know all spectra have same freq axis", action="store_true")
 ap.add_argument('--peak_on', help="Peak on event component (if other than max->min->val)", default=None)
@@ -62,8 +63,6 @@ if args.view:
 elif args.rawdata[0] == '+':
     step = int(args.rawdata[1:])
     args.rawdata = range(0, args.sets_per_pol, step)
-    if (args.sets_per_pol - args.rawdata[-1]) >= step:
-        args.rawdata.append(-1)
 else:
     a = args.rawdata.split(',')
     args.rawdata = [int(x) for x in a]
@@ -101,4 +100,5 @@ if __name__ == '__main__':
                         data=args.rawdata,
                         peak_on=args.peak_on,
                         data_only=args.data_only,
-                        sets_per_pol=args.sets_per_pol)
+                        sets_per_pol=args.sets_per_pol,
+                        keep_data=args.keep_data)
