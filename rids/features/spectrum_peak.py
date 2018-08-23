@@ -230,7 +230,7 @@ class SpectrumPeak(rids.Rids):
             self.peaked_on = fc
         elif fc != self.peaked_on:
             spectra[fc].comment += 'Peaked on different component: {} rather than {}'.format(fc, self.peaked_on)
-        # self.peak_finder(spectra[ec], view_peaks=self.view_peaks_on_event)
+        # self.peak_finder(spectra[fc])  # old version not used anymore
         self.peak_det(spectra[fc], delta=self.delta)
         self.find_bw()
 
@@ -259,6 +259,9 @@ class SpectrumPeak(rids.Rids):
             self.peak_viewer()
 
     def peak_finder(self, spec, cwt_range=[1, 3], rc_range=[4, 4]):
+        """
+        Deprecated peak_finder
+        """
         self.hipk_freq = spec.freq
         self.hipk_val = spec.val
         self.hipk = peaks.fp(spec.val, self.threshold, cwt_range, rc_range)
