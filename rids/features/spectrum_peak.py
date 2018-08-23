@@ -50,32 +50,29 @@ class FileSet:
 
     def chunk_it(self, chunk_size):
         self.chunked = {}
-        self.chunk_size = {}
         self.biggest_pol = {'pol': '-', 'len': -1, 'size': -1}
         for pol in self.timestamps:
-            self.chunk_size[pol] = 0
             self.chunked[pol] = []
-            chunk = []
+            _chnk = []
+            _cize = 0
             for i, ts in enumerate(sorted(self.timestamps[pol])):
                 if i and not i % chunk_size:
-                    self.chunked[pol].append(chunk)
-                    chunk = []
-                chunk.append(ts)
-                self.chunk_size[pol] += 1
-            if len(chunk):
-                self.chunked[pol].append(chunk)
-            if self.chunk_size[pol] > self.biggest_pol['size']:
+                    self.chunked[pol].append(_chnk)
+                    _chnk = []
+                _chnk.append(ts)
+                _cize += 1
+            self.chunked[pol].append(_chnk)
+            if _cize > self.biggest_pol['size']:
                 self.biggest_pol['pol'] = pol
                 self.biggest_pol['len'] = len(self.chunked[pol])
-                self.biggest_pol['size'] = self.chunk_size[pol]
-        self.chunked_time_limits = []
-        for i in range(self.biggest_pol['len']):
-            cts = []
-            for p in self.chunked:
-                cts.append(self.chunked[p][i][0])
-                cts.append(self.chunked[p][i][-1])
-            cts = sorted(cts)
-            self.chunked_time_limits.append([cts[0], cts[-1]])
+                self.biggest_pol['size'] = _cize
+        self.chunked_time_limits = [[] for x in range(self.biggest_pol['len'])]
+        for p, ts_chunked in six.iteritems(self.chunked):
+            for i, ts_list in enumerate(ts_chunked):
+                self.chunked_time_limits[i].extend((ts_list[0], ts_list[-1]))
+        for i in range(len(self.chunked_time_limits)):
+            x = sorted(self.chunked_time_limits[i])
+            self.chunked_time_limits[i] = [x[0], x[-1]]
 
 
 def is_spectrum(tag, prefixes=('data', 'cal', 'baseline')):
