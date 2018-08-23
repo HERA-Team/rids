@@ -40,15 +40,15 @@ class FileSet:
 
     def __init__(self, id):
         self.id = id
+        self.included_feature_components = set()
         # Each of these below is per polarization
         self.timestamps = {}
         # ...for clarity, manually set feature_components from subset of spectral_fields above
         self.maxhold = {}
         self.minhold = {}
         self.val = {}
-        self.included_feature_components = set()
 
-    def chunk_it(self, chunk_size):
+    def chunk_it(self, chunk_set):
         self.chunked = {}
         self.biggest_pol = {'pol': '-', 'len': -1, 'size': -1}
         for pol in self.timestamps:
@@ -56,7 +56,7 @@ class FileSet:
             _chnk = []
             _cize = 0
             for i, ts in enumerate(sorted(self.timestamps[pol])):
-                if i and not i % chunk_size:
+                if i and not i % chunk_set:
                     self.chunked[pol].append(_chnk)
                     _chnk = []
                 _chnk.append(ts)
@@ -92,18 +92,18 @@ class SpectrumPeak(rids.Rids):
 
     The feature_module_name is "SpectrumPeak"
 
-    Direct attributes are:
+    Direct attributes are (on top of base rids attributes):
         feature_module_name:  SpectrumPeak
         comment:  generic comments
         peaked_on:  event_component on which peaks were found
         delta:  delta value used in the peak-finding routine
         bw_range:  +/- bw_range (list) that gets searched over (and is then max)
-        delta_values:  a dictionary with some default values
-        freq: can be used for is_spectrum feature_sets if desired
+        val_unit:  unit for data
         freq_unit:  (even though a _unit, handled differently than unit attribute)
+        ... these are derived from data
+        freq: can be used for is_spectrum feature_sets if desired
         fmin: minimum frequency
         fmax: maximum frequency
-        val_unit:  unit for data
     Unit attributes are:
         threshold:  value used to threshold peaks
         threshold_unit:
@@ -112,10 +112,10 @@ class SpectrumPeak(rids.Rids):
         rbw:  if spectrum analyzer, resolution bandwidth (probably channel_width)
         rbw_unit:
     """
-    sp__direct_attributes = ['peaked_on', 'delta', 'bw_range', 'delta_values', 'feature_module_name',
+    sp__direct_attributes = ['peaked_on', 'delta', 'bw_range', 'feature_module_name',
                              'freq', 'freq_unit', 'fmin', 'fmax', 'val_unit']
     sp__unit_attributes = ['threshold', 'rbw', 'vbw']
-    polarizations = ['E', 'N', 'I']
+    sp__polarizations = ['E', 'N', 'I', 'Q', 'U', 'V', 'H', 'X', 'Y', 'unk']
 
     def __init__(self, comment='', share_freq=False, view_ongoing=False):
         # Initialize base attributes
@@ -130,8 +130,8 @@ class SpectrumPeak(rids.Rids):
 
         # Re-initialize attributes
         self.feature_module_name = 'SpectrumPeak'
-        self.bw_range = []  # Range to search for bandwidth
-        self.delta_values = {'zen': 0.1, 'sa': 1.0}
+        self.delta = 1.0  # Fairly random default value
+        self.bw_range = [[-10.0, 10.0]]  # "
         self.feature_sets = {}
         # Other attributes
         feature_set_info = Spectral()
@@ -141,6 +141,7 @@ class SpectrumPeak(rids.Rids):
         self.view_ongoing_features = view_ongoing
         self.share_freq = share_freq
         self.cal_files_present = False
+        self.all_lowercase_polarization_names = [x.lower for x in self.sp__polarizations]
 
     # Redefine the reader/writer/info base modules
     def reader(self, filename, reset=True):
@@ -399,7 +400,7 @@ class SpectrumPeak(rids.Rids):
                 continue
             fnd = _peel_filename(af, self.feature_components)
             if not len(fnd) or\
-                    fnd['polarization'] not in self.polarizations or\
+                    fnd['polarization'].lower() not in self.all_lowercase_polarization_names or\
                     fnd['feature_component'] not in self.feature_components:
                 continue
             use_it = False
@@ -425,10 +426,6 @@ class SpectrumPeak(rids.Rids):
         # Now process that dictionary
         for idkey in file_idp:
             #  This is the start of one id
-            if file_idp[idkey].id not in self.delta_values:
-                self.delta = 0.1
-            else:
-                self.delta = self.delta_values[file_idp[idkey].id]
             file_idp[idkey].chunk_it(sets_per_pol)
             bp = file_idp[idkey].biggest_pol
 
