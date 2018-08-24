@@ -34,6 +34,7 @@ ap.add_argument('-#', '--sets_per_pol', help="number of sets per pol per file", 
 ap.add_argument('--share_freq', help="invoke if you know all spectra have same freq axis", action="store_true")
 ap.add_argument('--peak_on', help="Peak on event component (if other than max->min->val)", default=None)
 ap.add_argument('--view_peaks_ongoing', help="view all peaks in process (diagnostic only!)", action="store_true")
+ap.add_argument('--show_progress', help="print file name as processed", action='store_true')
 ap.add_argument('--data_only', help="flag to only store data and not peaks", action='store_true')
 ap.add_argument('--ecal', help="E-pol cal filename", default=None)
 ap.add_argument('--ncal', help="N-pol cal filename", default=None)
@@ -101,4 +102,5 @@ if __name__ == '__main__':
                         peak_on=args.peak_on,
                         data_only=args.data_only,
                         sets_per_pol=args.sets_per_pol,
-                        keep_data=args.keep_data)
+                        keep_data=args.keep_data,
+                        show_progress=args.show_progress)

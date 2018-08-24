@@ -191,11 +191,15 @@ class SpectrumPeak(rids.Rids):
             check_timestamps_for_match = _check_timestamps_for_match(**fnargs)
             if len(check_timestamps_for_match):
                 self.feature_sets[fset_name].comment += check_timestamps_for_match
+        if self.show_progress:
+            print("Processing {}".format(fset_name))
         spectra = {}
         for fc, sfn in six.iteritems(fnargs):
             if fc not in self.feature_components or sfn is None:
                 continue
             spectra[fc] = Spectral()
+            if self.show_progress:
+                print("\t{}".format(sfn))
             _spectrum_reader(sfn, spectra[fc], polarization)
             ftr_fmin = min(spectra[fc].freq)
             ftr_fmax = max(spectra[fc].freq)
@@ -363,7 +367,7 @@ class SpectrumPeak(rids.Rids):
         print("NOT IMPLEMENTED YET: Apply the calibration, if available.")
 
     def process_files(self, directory='.', ident='all', data=[0, -1], peak_on=None,
-                      data_only=False, sets_per_pol=10000, keep_data=False):
+                      data_only=False, sets_per_pol=10000, keep_data=False, show_progress=False):
         """
         This is the standard method to process spectrum files in a directory to
         produce ridz files.  The module has an "outer loop" that is meant to handle
@@ -383,6 +387,7 @@ class SpectrumPeak(rids.Rids):
         sets_per_pol:  number of feature_sets per pol per ridz file (i.e. number of timestamps/pol/file)
         keep_data:  if False (default) it will delete the processed files, otherwise it will keep
         """
+        self.show_progress = show_progress
         # Get overall meta-data for filename
         th_for_fn = ''
         if self.threshold is not None:
