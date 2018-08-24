@@ -1,4 +1,7 @@
 #! /usr/bin/env python
+# Copy 2018 the HERA Project
+# Licensed under the 2-clause BSD license
+
 from __future__ import print_function, absolute_import, division
 import argparse
 import os

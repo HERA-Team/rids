@@ -1,3 +1,11 @@
+# -*- coding: utf-8 -*-
+# Copy 2018 the HERA Project
+# Licensed under the 2-clause BSD license
+
+"""Base module:  RIDS
+This module defines the base format.
+"""
+
 from __future__ import print_function, absolute_import, division
 import json
 import os
