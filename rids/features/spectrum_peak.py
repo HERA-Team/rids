@@ -141,7 +141,7 @@ class SpectrumPeak(rids.Rids):
         self.view_ongoing_features = view_ongoing
         self.share_freq = share_freq
         self.cal_files_present = False
-        self.all_lowercase_polarization_names = [x.lower for x in self.sp__polarizations]
+        self.all_lowercase_polarization_names = [x.lower() for x in self.sp__polarizations]
 
     # Redefine the reader/writer/info base modules
     def reader(self, filename, reset=True):
@@ -404,7 +404,7 @@ class SpectrumPeak(rids.Rids):
         # Get file_idp FileSet of files to do
         file_idp = {}  # keyed set of classes for file-sets
         for af in sorted(os.listdir(directory)):
-            if 'rid' in af.split('.')[-1]:
+            if 'rid' in af.split('.')[-1] or af[0] == '.':
                 continue
             fnd = _peel_filename(af, self.feature_components)
             if not len(fnd) or\
@@ -430,7 +430,6 @@ class SpectrumPeak(rids.Rids):
                 if pol not in getattr(file_idp[idkey], feco):
                     getattr(file_idp[idkey], feco)[pol] = {}
                 getattr(file_idp[idkey], feco)[pol][fnd['timestamp']] = af
-
         # Now process that dictionary
         for idkey in file_idp:
             #  This is the start of one id
