@@ -458,8 +458,8 @@ class SpectrumPeak(rids.Rids):
                             ts = chunk_ts_list[j]
                         except IndexError:
                             break
+                        fnargs = {}
                         for feco in file_idp[idkey].included_feature_components:
-                            fnargs = {}
                             try:
                                 fnargs[feco] = os.path.join(directory, getattr(file_idp[idkey], feco)[pol][ts])
                                 files_this_pass.add(fnargs[feco])
@@ -471,8 +471,8 @@ class SpectrumPeak(rids.Rids):
                     if not data_only:
                         # ... get feature_sets
                         for ts in chunk_ts_list:
+                            fnargs = {}
                             for feco in file_idp[idkey].included_feature_components:
-                                fnargs = {}
                                 try:
                                     fnargs[feco] = os.path.join(directory, getattr(file_idp[idkey], feco)[pol][ts])
                                     files_this_pass.add(fnargs[feco])

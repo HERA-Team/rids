@@ -12,8 +12,8 @@ from rids import features
 
 ap = argparse.ArgumentParser()
 ap.add_argument('file', help="file(s) to use", default=None)
-ap.add_argument('--wf', help="plot raw_data as waterfall in that file ('val', 'maxhold', or 'minhold')", default=None)
-ap.add_argument('--stack', help="plot raw_data as stack in that file ( '' or csv list)", default=None)
+ap.add_argument('--wf', help="plot raw_data feature components as waterfall in that file ('val', 'maxhold', or 'minhold')", default=None)
+ap.add_argument('--stack', help="plot raw_data feature components as stack in that file ( '' or csv list)", default=None)
 ap.add_argument('--stream', help="plot raw_data as time streams in that file ( '' or csv list)", default=None)
 ap.add_argument('-f', '--f_range', help="range in freq for plots (min,max)", default=None)
 ap.add_argument('-t', '--t_range', help="range in time for plots (min,max)", default=None)

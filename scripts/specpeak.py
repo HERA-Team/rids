@@ -85,7 +85,12 @@ if __name__ == '__main__':
         print("\nFeature set keys:")
         for k in r.feature_sets.keys():
             if args.comment is None:
-                print("\t{}".format(k))
+                s = '['
+                for x in dir(r.feature_sets[k]):
+                    if x[0] != '_':
+                        s += '{}, '.format(x)
+                s = s.strip().strip(',') + ']'
+                print("\t{}  {}".format(k, s))
             else:
                 print('---{}---'.format(k))
                 if len(r.feature_sets[k].comment):
