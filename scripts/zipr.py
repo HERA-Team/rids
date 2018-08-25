@@ -19,10 +19,10 @@ if __name__ == '__main__':
     if file_type == 'ridz':
         out_filename = '.'.join(args.file.split('.')[:-1]) + '.rids'
         infp = gzip.GzipFile(args.file, 'rb')
-        outfp = file(out_filename, 'wb')
+        outfp = open(out_filename, 'wb')
     else:
         out_filename = '.'.join(args.file.split('.')[:-1]) + '.ridz'
-        infp = file(args.file, 'rb')
+        infp = open(args.file, 'rb')
         outfp = gzip.GzipFile(out_filename, 'wb')
 
     s = infp.read()

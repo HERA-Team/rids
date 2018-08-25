@@ -179,7 +179,7 @@ class Rids(object):
         else:
             r_open = open
         with r_open(filename, 'wb') as f:
-            f.write(jsd)
+            f.write(jsd.encode('utf-8'))
 
     def info(self):
         self._info()
