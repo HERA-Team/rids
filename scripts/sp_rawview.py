@@ -44,7 +44,7 @@ if args.stream is not None:
 if __name__ == '__main__':
     r = features.spectrum_peak.SpectrumPeak()
     r.reader(args.file)
-    s = features.sp_handling.SPHandling()
+    s = features.sp_handling_raw.SPHandling()
     if args.wf is not None:
         s.raw_data_plot(r, args.wf, plot_type='waterfall', f_range=args.f_range, t_range=args.t_range, keys=args.keys)
     if args.stack is not None:
