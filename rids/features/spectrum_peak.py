@@ -115,7 +115,7 @@ class SpectrumPeak(rids.Rids):
     sp__direct_attributes = ['peaked_on', 'delta', 'bw_range', 'feature_module_name',
                              'freq', 'freq_unit', 'fmin', 'fmax', 'val_unit']
     sp__unit_attributes = ['threshold', 'rbw', 'vbw']
-    sp__polarizations = ['E', 'N', 'I', 'Q', 'U', 'V', 'H', 'X', 'Y', 'unk', 'none']
+    sp__polarizations = ['E', 'N', 'I', 'Q', 'U', 'V', 'H', 'X', 'Y', 'XX', 'YY', 'XY', 'YX' 'unk', 'none']
 
     def __init__(self, comment='', share_freq=False, view_ongoing=False):
         # Initialize base attributes
