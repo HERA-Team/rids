@@ -69,7 +69,7 @@ class Rids(object):
     def get_datetime_from_timestamp(self, ts):
         if self.time_format.lower() == 'julian':
             from astropy.time import Time
-            if isinstance(ts, (str, unicode)):
+            if isinstance(ts, six.string_types):
                 ts = float(ts)
             dt = Time(ts, format='jd', scale='utc')
             return dt.datetime

@@ -10,7 +10,7 @@ def procfiles(files_to_proc, threshold=-15.0, cwt_range=[1, 7], rc_range=[4, 4],
               title_prefix='', dir=None, saveit=False, yrange='minmax'):
     fmin = f_range[0]
     fmax = f_range[1]
-    if isinstance(files_to_proc, (str, unicode)):
+    if isinstance(files_to_proc, six.string_types):
         files_to_proc = [files_to_proc]
     for fn in files_to_proc:
         fno = fn
@@ -35,7 +35,7 @@ def procfiles(files_to_proc, threshold=-15.0, cwt_range=[1, 7], rc_range=[4, 4],
         plt.plot([fmax, fmax], [min(y), max(y)], 'b--')
         plt.plot([fmin, fmax], [threshold, threshold], 'b:')
         plt.plot(x, y)
-        if isinstance(yrange, (str, unicode)):
+        if isinstance(yrange, six.string_types):
             ymin = min(y)
             ymax = max(y)
         else:

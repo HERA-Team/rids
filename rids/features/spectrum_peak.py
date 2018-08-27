@@ -303,7 +303,7 @@ class SpectrumPeak(rids.Rids):
             print("Threshold view not implemented yet.")
             threshold = None
         fc_list = collections.OrderedDict([('maxhold', ('r', 'v')), ('minhold', ('b', '^')), ('val', ('k', '_'))])
-        if isinstance(show_components, (str, unicode)):
+        if isinstance(show_components, six.string_types):
             show_components = fc_list.keys()
         color_list = ['r', 'b', 'k', 'g', 'm', 'c', 'y', '0.25', '0.5', '0.75']
         line_list = ['-', '--', ':']
@@ -564,7 +564,11 @@ def _get_timestr_from_ftr_key(fkey):
     if ':' in fkey:
         return fkey.split(':')[-2]
     if '.' in fkey:
-        return fkey.split('.')[-2]
+        s = fkey.split('.')
+        if is_spectrum(fkey):
+            return '.'.join(s[1:-2])
+        else:
+            return '.'.join(s[0:-2])
     return None
 
 
