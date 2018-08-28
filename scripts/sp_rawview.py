@@ -12,16 +12,16 @@ from rids import features
 
 ap = argparse.ArgumentParser()
 ap.add_argument('file', help="file(s) to use.  If non-RID file, will read in filenames contained in that file.", default=None)
-ap.add_argument('--wf', help="plot raw_data feature components as waterfall in that file ('val', 'maxhold', or 'minhold')", default=None)
+ap.add_argument('-w', '--wf', help="plot raw_data feature components as waterfall in that file ('val', 'maxhold', or 'minhold')", default=None)
 ap.add_argument('--stack', help="plot raw_data feature components as stack in that file ( '' or csv list)", default=None)
 ap.add_argument('--stream', help="plot raw_data as time streams in that file ( '' or csv list)", default=None)
 ap.add_argument('-f', '--f_range', help="range in freq for plots (min,max)", default=None)
 ap.add_argument('-t', '--t_range', help="range in time for plots (min,max)", default=None)
-ap.add_argument('--legend', help="include a legend on stack/stream plots", action='store_true')
-ap.add_argument('--keys', help="plot specific keys - generally use with stack (key1,key2,...)", default=None)
+ap.add_argument('-l', '--legend', help="include a legend on stack/stream plots", action='store_true')
+ap.add_argument('-k', '--keys', help="plot specific keys - generally use with stack (key1,key2,...)", default=None)
 ap.add_argument('--all_same_plot', help="put different feature components on same plot (not wf)", action='store_true')
-ap.add_argument('--suppress_wf_gaps', help="flag to ignore time gaps in wf plot, so the time-scale doesn't match", action='store_true')
-ap.add_argument('--wf_time_fill', help="value or scheme to use for missing values for suppress_wf_gaps", default='default')
+ap.add_argument('--suppress_wf_gaps', help="flag to ignore time gaps in wf plot [the time-scale won't match", action='store_true')
+ap.add_argument('--wf_time_fill', help="value or scheme to use for missing values if not suppress_wf_gaps", default='default')
 
 args = ap.parse_args()
 

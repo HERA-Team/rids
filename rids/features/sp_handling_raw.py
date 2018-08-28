@@ -27,25 +27,25 @@ class SPHandling:
         """
         Give a date range to make a waterfall with whatever raw data is in the file, or specific keys
         """
-        # Get times
+        # Get feature set keys
         if keys is None or keys[0] == 'all':
             sorted_ftr_keys = sorted(rid.feature_sets.keys())
         else:
             sorted_ftr_keys = sorted(keys)
-        time_keys = []
+        feature_keys = []
         for fs in sorted_ftr_keys:
             if spectrum_peak.is_spectrum(fs):
-                time_keys.append(fs)
-        time_keys = sorted(time_keys)
-        t0 = rid.get_datetime_from_timestamp(spectrum_peak._get_timestr_from_ftr_key(time_keys[0]))
-        tn = rid.get_datetime_from_timestamp(spectrum_peak._get_timestr_from_ftr_key(time_keys[-1]))
+                feature_keys.append(fs)
+        feature_keys = sorted(feature_keys)
+        t0 = rid.get_datetime_from_timestamp(spectrum_peak._get_timestr_from_ftr_key(feature_keys[0]))
+        tn = rid.get_datetime_from_timestamp(spectrum_peak._get_timestr_from_ftr_key(feature_keys[-1]))
         print("Data span {} - {}".format(t0, tn))
         duration, ts_unit = sp_utils.get_duration_in_std_units((tn - t0).total_seconds())
         if t_range is None:
             t_range = [0, duration]
 
         # Get freqs and channels
-        freq = rid.feature_sets[time_keys[0]].freq  # chose first one
+        freq = rid.feature_sets[feature_keys[0]].freq  # chose first one
         if freq == '@':  # share_freq was set
             freq = rid.freq
         lfrq = len(freq)
@@ -67,14 +67,14 @@ class SPHandling:
         freq_space = freq[lo_chan:hi_chan]
         len_freq_space = len(freq_space)
 
-        # Get time and keys
+        # Get time and final key list
         time_space = {}
         used_keys = {}
         nominal_t_step = 1E6
         for fc in feature_components:
             time_space[fc] = []
             used_keys[fc] = []
-            for i, fs in enumerate(time_keys):
+            for i, fs in enumerate(feature_keys):
                 ts = (rid.get_datetime_from_timestamp(spectrum_peak._get_timestr_from_ftr_key(fs)) - t0).total_seconds()
                 ts, x = sp_utils.get_duration_in_std_units(ts, use_unit=ts_unit)
                 if ts < t_range[0] or ts > t_range[1]:
@@ -155,7 +155,7 @@ class SPHandling:
                     if keys is None:
                         time_label = "{:.4f} {}".format(ts, ts_unit)
                     else:
-                        time_label = keys[i]
+                        time_label = used_keys[i]
                     if all_same_plot:
                         time_label = fc + ': ' + time_label
                     plt.plot(freq_space, wf[fc][i, :], label=time_label)
