@@ -114,21 +114,12 @@ class Rids(object):
                 If false, will overwrite headers etc but add events
                     (i.e. things with a unique key won't get overwritten)
         """
-        file_list = filename
-        if isinstance(filename, six.string_types):
-            if 'rid' in filename.lower().split('.')[-1]:
-                file_list = [filename]
-            else:
-                reset = True
-                print("Reading list from {}".format(filename))
-                file_list = []
-                with open(filename, 'r') as fp:
-                    for line in fp:
-                        file_list.append(line.strip())
+        file_list, reset = get_file_list_and_reset(filename, reset)
         if reset:
             self.reset()
         for filename in file_list:
-            self._reader(filename, reset=reset)
+            print("Reading {}".format(filename))
+            self._reader(filename)
 
     def _reader(self, filename, feature_direct=[], feature_unit=[]):
         self.rid_file = filename
@@ -220,6 +211,21 @@ class Rids(object):
             print("\tfeatures.{}:  {} {}".format(d, getattr(self, d), getattr(self, d + '_unit')))
         if self.feature_sets is not None and self.nsets != len(self.feature_sets):
             print("Note that the stated nsets={} does not match the found nsets={}".format(self.nsets, len(self.feature_sets)))
+
+
+def get_file_list_and_reset(filename, reset):
+    file_list = filename
+    if isinstance(filename, six.string_types):
+        if 'rid' in filename.lower().split('.')[-1]:
+            file_list = [filename]
+        else:
+            reset = True
+            print("Reading list from {}".format(filename))
+            file_list = []
+            with open(filename, 'r') as fp:
+                for line in fp:
+                    file_list.append(line.strip())
+    return file_list, reset
 
 
 def set_unit_values(C, d, x):

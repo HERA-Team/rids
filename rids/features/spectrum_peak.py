@@ -145,11 +145,29 @@ class SpectrumPeak(rids.Rids):
 
     # Redefine the reader/writer/info base modules
     def reader(self, filename, reset=True):
-        print("Reading {}".format(filename))
+        """
+        This will read RID files with a full or subset of structure entities.
+        If 'filename' is a RID file, it will read that file.
+        If 'filename' is a list, it will read in that list of files.
+        If 'filename' is a non-RID file it will assume it is a list of files and
+            1 - reset the current feature set
+            2 - read in the files listed in 'filename'
+
+        Parameters:
+        ------------
+        filename:  if single RID file or list read it/them
+                   if non-RID file, reset feature set and read list of files in it
+        reset:  If true, resets all elements.
+                If false, will overwrite headers etc but add events
+                    (i.e. things with a unique key won't get overwritten)
+        """
+        file_list, reset = rids.get_file_list_and_reset(filename, reset)
         if reset:
             self.reset()
-        self._reader(filename, feature_direct=self.sp__direct_attributes,
-                     feature_unit=self.sp__unit_attributes)
+        for filename in file_list:
+            print("Reading {}".format(filename))
+            self._reader(filename, feature_direct=self.sp__direct_attributes,
+                         feature_unit=self.sp__unit_attributes)
         # now need to fill in the share_freq feature values, if any
         for ftr in self.feature_sets:
             if self.feature_sets[ftr].freq == '@':
