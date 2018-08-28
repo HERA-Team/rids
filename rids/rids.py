@@ -99,18 +99,36 @@ class Rids(object):
 
     def reader(self, filename, reset=True):
         """
-        This will read a RID file with a full or subset of structure entities.
+        This will read RID files with a full or subset of structure entities.
+        If 'filename' is a RID file, it will read that file.
+        If 'filename' is a list, it will read in that list of files.
+        If 'filename' is a non-RID file it will assume it is a list of files and
+            1 - reset the current feature set
+            2 - read in the files listed in 'filename'
 
         Parameters:
         ------------
-        filename:  rids/m/z filename to read
+        filename:  if single RID file or list read it/them
+                   if non-RID file, reset feature set and read list of files in it
         reset:  If true, resets all elements.
                 If false, will overwrite headers etc but add events
                     (i.e. things with a unique key won't get overwritten)
         """
+        file_list = filename
+        if isinstance(filename, six.string_types):
+            if 'rid' in filename.lower().split('.')[-1]:
+                file_list = [filename]
+            else:
+                reset = True
+                print("Reading list from {}".format(filename))
+                file_list = []
+                with open(filename, 'r') as fp:
+                    for line in fp:
+                        file_list.append(line.strip())
         if reset:
             self.reset()
-        self._reader(filename, reset=reset)
+        for filename in file_list:
+            self._reader(filename, reset=reset)
 
     def _reader(self, filename, feature_direct=[], feature_unit=[]):
         self.rid_file = filename

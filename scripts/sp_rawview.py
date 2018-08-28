@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 from rids import features
 
 ap = argparse.ArgumentParser()
-ap.add_argument('file', help="file(s) to use", default=None)
+ap.add_argument('file', help="file(s) to use.  If non-RID file, will read in filenames contained in that file.", default=None)
 ap.add_argument('--wf', help="plot raw_data feature components as waterfall in that file ('val', 'maxhold', or 'minhold')", default=None)
 ap.add_argument('--stack', help="plot raw_data feature components as stack in that file ( '' or csv list)", default=None)
 ap.add_argument('--stream', help="plot raw_data as time streams in that file ( '' or csv list)", default=None)
@@ -22,6 +22,9 @@ ap.add_argument('--keys', help="plot specific keys - generally use with stack (k
 ap.add_argument('--all_same_plot', help="put different feature components on same plot (not wf)", action='store_true')
 
 args = ap.parse_args()
+
+if ',' in args.file:
+    args.file = args.file.split(',')
 
 if args.f_range is not None:
     args.f_range = [float(x) for x in args.f_range.split(',')]

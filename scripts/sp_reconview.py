@@ -23,6 +23,9 @@ ap.add_argument('--all_same_plot', help="put different feature components on sam
 
 args = ap.parse_args()
 
+if ',' in args.file:
+    args.file = args.file.split(',')
+
 if args.f_range is not None:
     args.f_range = [float(x) for x in args.f_range.split(',')]
 
