@@ -47,6 +47,8 @@ if args.stream is not None:
     args.stream = args.stream.split(',')
 
 if args.suppress_wf_gaps:
+    args.wf_time_fill = None
+else:
     try:
         args.wf_time_fill = float(args.wf_time_fill)
     except ValueError:
@@ -57,8 +59,6 @@ if args.suppress_wf_gaps:
             import sys
             print("Invalid wf_time_fill:  {}".format(args.wf_time_fill))
             sys.exit()
-else:
-    args.wf_time_fill = None
 
 if __name__ == '__main__':
     r = features.spectrum_peak.SpectrumPeak()
