@@ -86,7 +86,7 @@ class Rids(object):
             if k in self.direct_attributes:
                 setattr(self, k, kwargs[k])
             elif k in self.unit_attributes:
-                self.set_unit_values(self, k, kwargs[k])
+                self._set_unit_values(self, k, kwargs[k])
 
     def append_comment(self, comment):
         if comment is None:
@@ -114,7 +114,7 @@ class Rids(object):
                 If false, will overwrite headers etc but add events
                     (i.e. things with a unique key won't get overwritten)
         """
-        file_list, reset = get_file_list_and_reset(filename, reset)
+        file_list, reset = _get_file_list_and_reset(filename, reset)
         if reset:
             self.reset()
         for filename in file_list:
@@ -138,9 +138,9 @@ class Rids(object):
             elif d in feature_direct:
                 setattr(self, d, val)
             elif d in self.unit_attributes:
-                set_unit_values(self, d, val)
+                _set_unit_values(self, d, val)
             elif d in feature_unit:
-                set_unit_values(self, d, val)
+                _set_unit_values(self, d, val)
             elif d == 'feature_sets':
                 if self.feature_sets is None:
                     continue
@@ -181,7 +181,7 @@ class Rids(object):
                     continue
         jsd = json.dumps(ds, sort_keys=True, indent=4, separators=(',', ':'))
         if fix_list:
-            jsd = fix_json_list(jsd)
+            jsd = _fix_json_list(jsd)
         file_type = filename.split('.')[-1].lower()
         if file_type == 'ridz':
             r_open = gzip.open
@@ -213,7 +213,7 @@ class Rids(object):
             print("Note that the stated nsets={} does not match the found nsets={}".format(self.nsets, len(self.feature_sets)))
 
 
-def get_file_list_and_reset(filename, reset):
+def _get_file_list_and_reset(filename, reset):
     file_list = filename
     if isinstance(filename, six.string_types):
         if 'rid' in filename.lower().split('.')[-1]:
@@ -229,7 +229,7 @@ def get_file_list_and_reset(filename, reset):
     return file_list, reset
 
 
-def set_unit_values(C, d, x):
+def _set_unit_values(C, d, x):
     v = x.split()
     try:
         d0 = float(v[0])
@@ -242,7 +242,7 @@ def set_unit_values(C, d, x):
     setattr(C, d + '_unit', d1)
 
 
-def fix_json_list(jsd):
+def _fix_json_list(jsd):
     spaces = ['\n', ' ']
     fixed = ''
     in_list = False

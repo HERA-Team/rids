@@ -161,7 +161,7 @@ class SpectrumPeak(rids.Rids):
                 If false, will overwrite headers etc but add events
                     (i.e. things with a unique key won't get overwritten)
         """
-        file_list, reset = rids.get_file_list_and_reset(filename, reset)
+        file_list, reset = rids._get_file_list_and_reset(filename, reset)
         if reset:
             self.reset()
         for filename in file_list:

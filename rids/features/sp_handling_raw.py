@@ -23,7 +23,7 @@ class SPHandling:
         self.sp = spectrum_peak.SpectrumPeak()
 
     def raw_data_plot(self, rid, feature_components, plot_type='waterfall', f_range=None, t_range=None,
-                      legend=False, keys=None, all_same_plot=False):
+                      wf_time_fill=None, legend=False, keys=None, all_same_plot=False):
         """
         Give a date range to make a waterfall with whatever raw data is in the file, or specific keys
         """
@@ -44,8 +44,10 @@ class SPHandling:
         if t_range is None:
             t_range = [0, duration]
 
-        # Get freqs
+        # Get freqs and channels
         freq = rid.feature_sets[time_keys[0]].freq  # chose first one
+        if freq == '@':  # share_freq was set
+            freq = rid.freq
         lfrq = len(freq)
         chan_size = (freq[-1] - freq[0]) / lfrq
         if f_range is None:
@@ -62,26 +64,39 @@ class SPHandling:
                 hi_chan = -1
             else:
                 hi_chan = int((f_range[1] - freq[0]) / chan_size)
+        freq_space = freq[lo_chan:hi_chan]
+        len_freq_space = len(freq_space)
 
-        # Get data and parameters
-        wf = {}
+        # Get time and keys
+        time_space = {}
         used_keys = {}
-        dur = {}
+        nominal_t_step = 1E6
         for fc in feature_components:
-            wf[fc] = []
+            time_space[fc] = []
             used_keys[fc] = []
-            dur[fc] = {'f': Namespace(), 't': Namespace()}
-            fadd = []
-            ftrunc = []
-            for fs in time_keys:
+            for i, fs in enumerate(time_keys):
                 ts = (rid.get_datetime_from_timestamp(spectrum_peak._get_timestr_from_ftr_key(fs)) - t0).total_seconds()
                 ts, x = sp_utils.get_duration_in_std_units(ts, use_unit=ts_unit)
                 if ts < t_range[0] or ts > t_range[1]:
                     continue
+                lents = len(time_space[fc])
+                time_space[fc].append(ts)
+                used_keys[fc].append(fs)
+                if lents and (ts - time_space[fc][i - 1]) < nominal_t_step:
+                    nominal_t_step = (ts - time_space[fc][i - 1])
+
+        # Get data and parameters
+        wf = {}
+        extrema = {}
+        for fc in feature_components:
+            wf[fc] = []
+            extrema[fc] = {'f': Namespace(), 't': Namespace()}
+            fadd = []
+            ftrunc = []
+            for i, fs in enumerate(used_keys[fc]):
                 x, y = spectrum_peak._spectrum_plotter(rid.feature_sets[fs].freq, getattr(rid.feature_sets[fs], fc), None)
                 if x is None:
                     continue
-                used_keys[fc].append(fs)
                 if len(x) < lfrq:
                     fadd.append(lfrq - len(x))
                     yend = y[-1]
@@ -90,14 +105,20 @@ class SPHandling:
                 elif len(x) > lfrq:
                     ftrunc.append(len(x) - lfrq)
                     y = y[:lfrq]
+                if i and wf_time_fill is not None:
+                    delta_t = time_space[fc][i] - time_space[fc][i - 1]
+                    if delta_t > 1.2 * nominal_t_step:
+                        num_missing = int(delta_t / nominal_t_step)
+                        for j in range(num_missing):
+                            wf[fc].append(wf_time_fill * np.ones(len_freq_space))
                 wf[fc].append(y[lo_chan:hi_chan])
             wf[fc] = np.array(wf[fc])
             t_lo = rid.get_datetime_from_timestamp(spectrum_peak._get_timestr_from_ftr_key(used_keys[fc][0]))
             t_hi = rid.get_datetime_from_timestamp(spectrum_peak._get_timestr_from_ftr_key(used_keys[fc][-1]))
-            dur[fc]['t'].lo = sp_utils.get_duration_in_std_units((t_lo - t0).total_seconds(), use_unit=ts_unit)[0]
-            dur[fc]['t'].hi = sp_utils.get_duration_in_std_units((t_hi - t0).total_seconds(), use_unit=ts_unit)[0]
-            dur[fc]['f'].lo = freq[lo_chan]
-            dur[fc]['f'].hi = freq[hi_chan]
+            extrema[fc]['t'].lo = sp_utils.get_duration_in_std_units((t_lo - t0).total_seconds(), use_unit=ts_unit)[0]
+            extrema[fc]['t'].hi = sp_utils.get_duration_in_std_units((t_hi - t0).total_seconds(), use_unit=ts_unit)[0]
+            extrema[fc]['f'].lo = freq[lo_chan]
+            extrema[fc]['f'].hi = freq[hi_chan]
             if len(fadd):
                 print("{}: had to add to {} spectra".format(fc, len(fadd)))
                 print(fadd)
@@ -108,8 +129,9 @@ class SPHandling:
         # plot data (waterfall) - and return
         if plot_type == 'waterfall':
             for fc in feature_components:
+                lims = [extrema[fc]['f'].lo, extrema[fc]['f'].hi, extrema[fc]['t'].hi, extrema[fc]['t'].lo]
                 plt.figure(fc)
-                plt.imshow(wf[fc], aspect='auto', extent=[dur[fc]['f'].lo, dur[fc]['f'].hi, dur[fc]['t'].hi, dur[fc]['t'].lo])
+                plt.imshow(wf[fc], aspect='auto', extent=lims)
                 plt.xlabel('Freq [{}]'.format(rid.freq_unit))
                 plt.ylabel('{} after {}'.format(ts_unit, t0))
                 plt.colorbar()
@@ -117,21 +139,14 @@ class SPHandling:
 
         # plot data (other)
         for fc in feature_components:
-            if keys is not None:
-                keys = used_keys[fc]
             if not all_same_plot:
                 plt.figure(fc)
-            time_space = []
-            for fs in used_keys[fc]:
-                tkey = rid.get_datetime_from_timestamp(spectrum_peak._get_timestr_from_ftr_key(fs))
-                time_space.append(sp_utils.get_duration_in_std_units((tkey - t0).total_seconds(), use_unit=ts_unit)[0])
-            freq_space = np.linspace(dur[fc]['f'].lo, dur[fc]['f'].hi, len(wf[fc][0]))
             if plot_type == 'stream':
                 for i, f in enumerate(freq_space):
                     freq_label = "{:.3f} {}".format(f, rid.freq_unit)
                     if all_same_plot:
                         freq_label = fc + ': ' + freq_label
-                    plt.plot(time_space, wf[fc][:, i], label=freq_label)
+                    plt.plot(time_space[fc], wf[fc][:, i], label=freq_label)
                 print("Number of plots: {}".format(len(freq_space)))
                 plt.xlabel('{} after {}'.format(ts_unit, t0))
                 plt.ylabel('Power [{}]'.format(rid.val_unit))
