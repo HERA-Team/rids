@@ -224,7 +224,8 @@ def get_file_list_and_reset(filename, reset):
             file_list = []
             with open(filename, 'r') as fp:
                 for line in fp:
-                    file_list.append(line.strip())
+                    if len(line.strip()):
+                        file_list.append(line.strip())
     return file_list, reset
 
 
