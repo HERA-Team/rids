@@ -25,8 +25,7 @@ ap.add_argument('--wf_time_fill', help="value or scheme to use for missing value
 
 args = ap.parse_args()
 
-if ',' in args.file:
-    args.file = args.file.split(',')
+args.file = args.file.split(',')
 
 if args.f_range is not None:
     args.f_range = [float(x) for x in args.f_range.split(',')]
