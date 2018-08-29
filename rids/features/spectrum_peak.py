@@ -219,12 +219,12 @@ class SpectrumPeak(rids.Rids):
             if self.show_progress:
                 print("\t{}".format(sfn))
             _spectrum_reader(sfn, spectra[fc], polarization)
-            ftr_fmin = min(spectra[fc].freq)
-            ftr_fmax = max(spectra[fc].freq)
-            if ftr_fmin < self.fmin:
-                self.fmin = ftr_fmin
-            if ftr_fmax > self.fmax:
-                self.fmax = ftr_fmax
+            fext = min(spectra[fc].freq)
+            if fext < self.fmin:
+                self.fmin = fext
+            fext = max(spectra[fc].freq)
+            if fext > self.fmax:
+                self.fmax = fext
             if is_spectrum(fset_tag):
                 if self.share_freq:
                     self.feature_sets[fset_name].freq = '@'
