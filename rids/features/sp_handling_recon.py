@@ -14,6 +14,7 @@ from . import spectrum_peak
 from argparse import Namespace
 import numpy as np
 import matplotlib.pyplot as plt
+import six
 
 
 class SPHandling:
@@ -73,6 +74,8 @@ class SPHandling:
                     except AttributeError:
                         continue
                     except ValueError:
+                        continue
+                    if not isinstance(v, (six.integer_types, float)):
                         continue
                     if v < self.reconstituted_info.dfill:
                         self.reconstituted_info.dfill = v

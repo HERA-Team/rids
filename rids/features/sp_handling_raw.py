@@ -15,6 +15,7 @@ from . import sp_utils
 from argparse import Namespace
 import numpy as np
 import matplotlib.pyplot as plt
+import six
 
 
 class SPHandling:
@@ -22,12 +23,9 @@ class SPHandling:
     def __init__(self):
         self.sp = spectrum_peak.SpectrumPeak()
 
-    def raw_data_plot(self, rid, feature_components, plot_type='waterfall', f_range=None, t_range=None,
-                      wf_time_fill=None, legend=False, keys=None, all_same_plot=False):
-        """
-        Give a date range to make a waterfall with whatever raw data is in the file, or specific keys
-        """
-        # Get feature set keys
+    def get_feature_set_keys(self, rid, keys=None):
+        if isinstance(keys, six.string_types()):
+            keys = [keys]
         if keys is None or keys[0] == 'all':
             sorted_ftr_keys = sorted(rid.feature_sets.keys())
         else:
@@ -36,14 +34,9 @@ class SPHandling:
         for fs in sorted_ftr_keys:
             if spectrum_peak.is_spectrum(fs):
                 feature_keys.append(fs)
-        feature_keys = sorted(feature_keys)
-        t0 = rid.get_datetime_from_timestamp(spectrum_peak._get_timestr_from_ftr_key(feature_keys[0]))
-        tn = rid.get_datetime_from_timestamp(spectrum_peak._get_timestr_from_ftr_key(feature_keys[-1]))
-        print("Data span {} - {}".format(t0, tn))
-        duration, ts_unit = sp_utils.get_duration_in_std_units((tn - t0).total_seconds())
-        if t_range is None:
-            t_range = [0, duration]
+        return sorted(feature_keys)
 
+    def get_freq_chan(self, rid, feature_keys, f_frange=None):
         # Get freqs and channels
         freq = rid.feature_sets[feature_keys[0]].freq  # chose first one
         if freq == '@':  # share_freq was set
@@ -66,6 +59,22 @@ class SPHandling:
                 hi_chan = int((f_range[1] - freq[0]) / chan_size)
         freq_space = freq[lo_chan:hi_chan]
         len_freq_space = len(freq_space)
+
+    def raw_data_plot(self, rid, feature_components, plot_type='waterfall', f_range=None, t_range=None,
+                      wf_time_fill=None, legend=False, keys=None, all_same_plot=False):
+        """
+        Give a date range to make a waterfall with whatever raw data is in the file, or in specific keys
+        """
+        feature_keys = self.get_feature_set_keys(rid, keys=keys)
+
+        t0 = rid.get_datetime_from_timestamp(spectrum_peak._get_timestr_from_ftr_key(feature_keys[0]))
+        tn = rid.get_datetime_from_timestamp(spectrum_peak._get_timestr_from_ftr_key(feature_keys[-1]))
+        print("Data span {} - {}".format(t0, tn))
+        duration, ts_unit = sp_utils.get_duration_in_std_units((tn - t0).total_seconds())
+        if t_range is None:
+            t_range = [0, duration]
+
+
 
         # Get time and final key list
         time_space = {}

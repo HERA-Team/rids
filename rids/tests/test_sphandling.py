@@ -4,6 +4,8 @@
 
 from __future__ import print_function, division, absolute_import
 
+import unittest
+
 from .. import features
 import matplotlib.pyplot as plt
 
