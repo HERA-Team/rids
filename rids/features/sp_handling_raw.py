@@ -57,8 +57,7 @@ class SPHandling:
                 hi_chan = -1
             else:
                 hi_chan = int((f_range[1] - freq[0]) / chan_size)
-        freq_space = freq[lo_chan:hi_chan]
-        len_freq_space = len(freq_space)
+        return freq, lo_chan, hi_chan
 
     def raw_data_plot(self, rid, feature_components, plot_type='waterfall', f_range=None, t_range=None,
                       wf_time_fill=None, legend=False, keys=None, all_same_plot=False):
@@ -73,8 +72,9 @@ class SPHandling:
         duration, ts_unit = sp_utils.get_duration_in_std_units((tn - t0).total_seconds())
         if t_range is None:
             t_range = [0, duration]
-
-
+        freq, lo_chan, hi_chan = self.get_freq_chan(rid, feature_keys, f_range=f_range)
+        lfrq = len(freq)
+        freq_space = freq[lo_chan:hi_chan]
 
         # Get time and final key list
         time_space = {}
@@ -119,7 +119,7 @@ class SPHandling:
                     if delta_t > 1.2 * nominal_t_step:
                         num_missing = int(delta_t / nominal_t_step)
                         for j in range(num_missing):
-                            wf[fc].append(wf_time_fill * np.ones(len_freq_space))
+                            wf[fc].append(wf_time_fill * np.ones(len(freq_space)))
                 wf[fc].append(y[lo_chan:hi_chan])
             wf[fc] = np.array(wf[fc])
             t_lo = rid.get_datetime_from_timestamp(spectrum_peak._get_timestr_from_ftr_key(used_keys[fc][0]))
