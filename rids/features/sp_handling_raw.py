@@ -24,7 +24,7 @@ class SPHandling:
         self.sp = spectrum_peak.SpectrumPeak()
 
     def get_feature_set_keys(self, rid, keys=None):
-        if isinstance(keys, six.string_types()):
+        if isinstance(keys, six.string_types):
             keys = [keys]
         if keys is None or keys[0] == 'all':
             sorted_ftr_keys = sorted(rid.feature_sets.keys())
@@ -65,7 +65,6 @@ class SPHandling:
         Give a date range to make a waterfall with whatever raw data is in the file, or in specific keys
         """
         feature_keys = self.get_feature_set_keys(rid, keys=keys)
-
         t0 = rid.get_datetime_from_timestamp(spectrum_peak._get_timestr_from_ftr_key(feature_keys[0]))
         tn = rid.get_datetime_from_timestamp(spectrum_peak._get_timestr_from_ftr_key(feature_keys[-1]))
         print("Data span {} - {}".format(t0, tn))
