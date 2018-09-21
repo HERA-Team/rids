@@ -115,7 +115,7 @@ class SpectrumPeak(rids.Rids):
     sp__direct_attributes = ['peaked_on', 'delta', 'bw_range', 'feature_module_name',
                              'freq', 'freq_unit', 'fmin', 'fmax', 'val_unit']
     sp__unit_attributes = ['threshold', 'rbw', 'vbw']
-    sp__polarizations = ['E', 'N', 'I', 'Q', 'U', 'V', 'H', 'X', 'Y', 'XX', 'YY', 'XY', 'YX' 'unk', 'none']
+    sp__polarizations = ['E', 'N', 'I', 'Q', 'U', 'V', 'H', 'X', 'Y', 'XX', 'YY', 'XY', 'YX', 'unk', 'none']
 
     def __init__(self, comment='', share_freq=False, view_ongoing=False):
         # Initialize base attributes
@@ -425,6 +425,10 @@ class SpectrumPeak(rids.Rids):
             if 'rid' in af.split('.')[-1] or af[0] == '.':
                 continue
             fnd = _peel_filename(af, self.feature_components)
+            print(len(fnd))
+            print(fnd)
+            print(self.all_lowercase_polarization_names)
+            print(self.feature_components)
             if not len(fnd) or\
                     fnd['polarization'].lower() not in self.all_lowercase_polarization_names or\
                     fnd['feature_component'] not in self.feature_components:
@@ -435,6 +439,7 @@ class SpectrumPeak(rids.Rids):
                     use_it = True
             elif isinstance(ident, list) and fnd['ident'] in ident:
                 use_it = True
+            print(af, use_it)
             if use_it:
                 idkey = fnd['ident']
                 pol = fnd['polarization']
