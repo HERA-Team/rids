@@ -26,7 +26,7 @@ class Spectral:
     """
     spectral_fields = ['maxhold', 'minhold', 'val', 'comment', 'polarization', 'freq', 'bw']
 
-    def __init__(self, stype=None, polarization='', comment=''):
+    def __init__(self, polarization='', comment=''):
         self.comment = comment
         self.polarization = polarization
         self.freq = []
@@ -585,17 +585,12 @@ def _peel_filename(v, fclist=None):
 
 def _get_timestr_from_ftr_key(fkey):
     if ':' in fkey:
-        print(fkey.split(':')[-2])
         return fkey.split(':')[-2]
     if '.' in fkey:
         s = fkey.split('.')
         if is_spectrum(fkey):
-            print(s, 'a')
-            print(s[1:-1])
             return '.'.join(s[1:-2])
         else:
-            print(s, 'b')
-            print('.'.join(s[0:-2]))
             return '.'.join(s[0:-2])
     return None
 
