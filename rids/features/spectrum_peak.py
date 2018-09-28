@@ -589,9 +589,9 @@ def _get_timestr_from_ftr_key(fkey):
     if '.' in fkey:
         s = fkey.split('.')
         if is_spectrum(fkey):
-            return '.'.join(s[1:-2])
+            return '.'.join(s[1:-1])
         else:
-            return '.'.join(s[0:-2])
+            return '.'.join(s[0:-1])
     return None
 
 

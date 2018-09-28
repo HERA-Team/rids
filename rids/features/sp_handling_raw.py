@@ -36,7 +36,7 @@ class SPHandling:
                 feature_keys.append(fs)
         return sorted(feature_keys)
 
-    def get_freq_chan(self, rid, feature_keys, f_frange=None):
+    def get_freq_chan(self, rid, feature_keys, f_range=None):
         # Get freqs and channels
         freq = rid.feature_sets[feature_keys[0]].freq  # chose first one
         if freq == '@':  # share_freq was set
@@ -129,10 +129,10 @@ class SPHandling:
             extrema[fc]['f'].hi = freq[hi_chan]
             if len(fadd):
                 print("{}: had to add to {} spectra".format(fc, len(fadd)))
-                print(fadd)
+                print("{} ... {}".format(fadd[0], fadd[-1]))
             if len(ftrunc):
                 print("{}: had to truncate {} spectra".format(fc, len(ftrunc)))
-                print(ftrunc)
+                print("{} ... {}".format(ftrunc[0], ftrunc[-1]))
 
         # plot data (waterfall) - and return
         if plot_type == 'waterfall':
