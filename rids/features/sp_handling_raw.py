@@ -49,10 +49,10 @@ class SPHandling:
 
     def set_freq(self, f_range=None):
         """
+        Makes f_range a class variable self.f_range, updating if supplied None
         Sets self.full_freq, the "likely" full frequency range (either the
             first one or shared one, if used.)
         Sets self.freq_space, the frequencies used.
-        Makes f_range a class variable self.f_range, updating if supplied None
         Sets class variable self.chan_size
         Sets class variable self.lo_chan:  index in full_freq of lowest freq
         Sets class variable self.hi_chan:  index in full_freq of highest freq
@@ -132,11 +132,24 @@ class SPHandling:
                     self.nominal_t_step = (ts - self.time_space[fc][i - 1])
 
     def process(self, feature_components, wf_time_fill=None, show_edits=True):
-        self.wf = {}
+        """
+        Process the rid data to make the plots.
+        Sets self.wf:  all of the data in waterfall format
+        Sets self.extrema:  time and freq extrema
+        Sets self.feature_components:  makes global
+
+        Parameters:
+        ------------
+        feature_components:  feature components to use
+        wf_file_fill:  value to use if wish to/need to fill in gaps in the data for waterfall plot.
+        show_edits:  If True, shows the plot of what it did to make the waterfall columns align.
+        """
+        wf = {}
         self.extrema = {}
         lfrq = len(self.freq_space)
+        self.feature_components = feature_components
         for fc in feature_components:
-            self.wf[fc] = []
+            wf[fc] = []
             self.extrema[fc] = {'f': Namespace(), 't': Namespace()}
             fadd = []
             ftrunc = []
@@ -153,39 +166,40 @@ class SPHandling:
                     ftrunc.append(len(x) - lfrq)
                     y = y[:lfrq]
                 if i and wf_time_fill is not None:
-                    delta_t = time_space[fc][i] - time_space[fc][i - 1]
-                    if delta_t > 1.2 * nominal_t_step:
-                        num_missing = int(delta_t / nominal_t_step)
+                    delta_t = self.time_space[fc][i] - self.time_space[fc][i - 1]
+                    if delta_t > 1.2 * self.nominal_t_step:
+                        num_missing = int(delta_t / self.nominal_t_step)
                         for j in range(num_missing):
-                            wf[fc].append(wf_time_fill * np.ones(len(freq_space)))
+                            wf[fc].append(wf_time_fill * np.ones(len(self.freq_space)))
                 wf[fc].append(y[lo_chan:hi_chan])
-            wf[fc] = np.array(wf[fc])
-            t_lo = rid.get_datetime_from_timestamp(spectrum_peak._get_timestr_from_ftr_key(used_keys[fc][0]))
-            t_hi = rid.get_datetime_from_timestamp(spectrum_peak._get_timestr_from_ftr_key(used_keys[fc][-1]))
-            extrema[fc]['t'].lo = sp_utils.get_duration_in_std_units((t_lo - t0).total_seconds(), use_unit=ts_unit)[0]
-            extrema[fc]['t'].hi = sp_utils.get_duration_in_std_units((t_hi - t0).total_seconds(), use_unit=ts_unit)[0]
-            extrema[fc]['f'].lo = freq[lo_chan]
-            extrema[fc]['f'].hi = freq[hi_chan]
-            plt.figure('max')
-            plt.plot(fadd)
-            if len(fadd):
-                print("{}: had to add to {} spectra (max {})".format(fc, len(fadd), max(fadd)))
-            if len(ftrunc):
-                print("{}: had to truncate {} spectra (max {})".format(fc, len(ftrunc), max(ftrunc)))
+            self.wf[fc] = np.array(wf[fc])
+            t_lo = self.rid.get_datetime_from_timestamp(spectrum_peak._get_timestr_from_ftr_key(self.used_keys[fc][0]))
+            t_hi = self.rid.get_datetime_from_timestamp(spectrum_peak._get_timestr_from_ftr_key(self.used_keys[fc][-1]))
+            self.extrema[fc]['t'].lo = sp_utils.get_duration_in_std_units((t_lo - self.time_0).total_seconds(), use_unit=self.ts_unit)[0]
+            self.extrema[fc]['t'].hi = sp_utils.get_duration_in_std_units((t_hi - self.time_0).total_seconds(), use_unit=self.ts_unit)[0]
+            self.extrema[fc]['f'].lo = freq[lo_chan]
+            self.extrema[fc]['f'].hi = freq[hi_chan]
+            if show_edits:
+                plt.figure('max')
+                plt.plot(fadd)
+                if len(fadd):
+                    print("{}: had to add to {} spectra (max {})".format(fc, len(fadd), max(fadd)))
+                if len(ftrunc):
+                    print("{}: had to truncate {} spectra (max {})".format(fc, len(ftrunc), max(ftrunc)))
 
-    def raw_waterfall_plot(self, feature_components, wf_time_fill=None):
+    def raw_waterfall_plot(self):
         """
-        Give a date range to make a waterfall with whatever raw data is in the file, or in specific keys
+        Plots the full waterfall
         """
         # Get data and parameters
 
-            for fc in feature_components:
-                lims = [extrema[fc]['f'].lo, extrema[fc]['f'].hi, extrema[fc]['t'].hi, extrema[fc]['t'].lo]
-                plt.figure(fc)
-                plt.imshow(wf[fc], aspect='auto', extent=lims)
-                plt.xlabel('Freq [{}]'.format(rid.freq_unit))
-                plt.ylabel('{} after {}'.format(ts_unit, t0))
-                plt.colorbar()
+        for fc in self.feature_components:
+            lims = [self.extrema[fc]['f'].lo, self.extrema[fc]['f'].hi, self.extrema[fc]['t'].hi, self.extrema[fc]['t'].lo]
+            plt.figure(fc)
+            plt.imshow(self.wf[fc], aspect='auto', extent=lims)
+            plt.xlabel('Freq [{}]'.format(self.rid.freq_unit))
+            plt.ylabel('{} after {}'.format(self.ts_unit, self.time_0))
+            plt.colorbar()
 
     def raw_2D_plot(self, feature_components, plot_type, legend=False, all_same_plot=False):
         # plot data (other)

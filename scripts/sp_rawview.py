@@ -22,6 +22,7 @@ ap.add_argument('-k', '--keys', help="plot specific keys - generally use with st
 ap.add_argument('--all_same_plot', help="put different feature components on same plot (not wf)", action='store_true')
 ap.add_argument('--suppress_wf_gaps', help="flag to ignore time gaps in wf plot [the time-scale won't match", action='store_true')
 ap.add_argument('--wf_time_fill', help="value or scheme to use for missing values if not suppress_wf_gaps", default='default')
+ap.add_argument('--hide-edits', dest='show_edits', help="Flag to display info on what was needed to make arrays same length.", action='store_false')
 
 args = ap.parse_args()
 
@@ -71,9 +72,12 @@ if __name__ == '__main__':
     s.time_filter()
     # Plot it
     if args.wf is not None:
-        s.raw_waterfall_plot(args.wf, wf_time_fill=args.wf_time_fill)
+        s.process(args.wf, wf_time_file=args.wf_time_fill, show_edits=args.show_edits)
+        s.raw_waterfall_plot()
     if args.stack is not None:
-        s.raw_2D_plot(args.stack, plot_type='stack', legend=args.legend, all_same_plot=args.all_same_plot)
+        s.process(args.stack, show_edits=args.show_edits)
+        s.raw_2D_plot(plot_type='stack', legend=args.legend, all_same_plot=args.all_same_plot)
     if args.stream is not None:
-        s.raw_2D_plot(args.stream, plot_type='stream', legend=args.legend, all_same_plot=args.all_same_plot)
+        s.process(args.stream, show_edits=args.show_edits)
+        s.raw_2D_plot(plot_type='stream', legend=args.legend, all_same_plot=args.all_same_plot)
     plt.show()
