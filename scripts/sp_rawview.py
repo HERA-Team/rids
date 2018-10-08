@@ -60,16 +60,20 @@ else:
             sys.exit()
 
 if __name__ == '__main__':
+    # Read in data
     r = features.spectrum_peak.SpectrumPeak()
     r.reader(args.file)
-    s = features.sp_handling_raw.SPHandling()
+    # Set up data parameters for plot
+    s = features.sp_handling_raw.SPHandling(r)
+    s.set_feature_keys(keys=args.keys)
+    s.set_freq(f_range=args.f_range)
+    s.set_time_range(t_range=args.t_range)
+    s.time_filter()
+    # Plot it
     if args.wf is not None:
-        s.raw_data_plot(r, args.wf, plot_type='waterfall', f_range=args.f_range, t_range=args.t_range,
-                        wf_time_fill=args.wf_time_fill, keys=args.keys)
+        s.raw_waterfall_plot(args.wf, wf_time_fill=args.wf_time_fill)
     if args.stack is not None:
-        s.raw_data_plot(r, args.stack, plot_type='stack', f_range=args.f_range, t_range=args.t_range,
-                        legend=args.legend, keys=args.keys, all_same_plot=args.all_same_plot)
+        s.raw_2D_plot(args.stack, plot_type='stack', legend=args.legend, all_same_plot=args.all_same_plot)
     if args.stream is not None:
-        s.raw_data_plot(r, args.stream, plot_type='stream', f_range=args.f_range, t_range=args.t_range,
-                        legend=args.legend, keys=args.keys, all_same_plot=args.all_same_plot)
+        s.raw_2D_plot(args.stream, plot_type='stream', legend=args.legend, all_same_plot=args.all_same_plot)
     plt.show()

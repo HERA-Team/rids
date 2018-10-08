@@ -20,95 +20,134 @@ import six
 
 class SPHandling:
 
-    def __init__(self):
+    def __init__(self, rid_class):
         self.sp = spectrum_peak.SpectrumPeak()
+        self.rid = rid_class
 
-    def get_feature_set_keys(self, rid, keys=None):
+    def set_feature_keys(self, keys=None):
+        """
+        Sets self.feature_keys, the sorted list of keys of _spectrum_ data.
+        Sets self.specific_keys to True, if keys provided and fewer than 10.  Used for plotting legend
+
+        Parameters:
+        ------------
+        keys:  desired keys to check - None or 'all' returns all spectrum keys
+        """
+        self.specific_keys = False
         if isinstance(keys, six.string_types):
             keys = [keys]
         if keys is None or keys[0] == 'all':
-            sorted_ftr_keys = sorted(rid.feature_sets.keys())
+            sorted_ftr_keys = sorted(self.rid.feature_sets.keys())
         else:
+            if len(keys) < 10:
+                self.specific_keys = True
             sorted_ftr_keys = sorted(keys)
-        feature_keys = []
+        self.feature_keys = []
         for fs in sorted_ftr_keys:
             if spectrum_peak.is_spectrum(fs):
-                feature_keys.append(fs)
-        return sorted(feature_keys)
+                self.feature_keys.append(fs)
 
-    def get_freq_chan(self, rid, feature_keys, f_range=None):
-        # Get freqs and channels
-        freq = rid.feature_sets[feature_keys[0]].freq  # chose first one
-        if freq == '@':  # share_freq was set
-            freq = rid.freq
-        lfrq = len(freq)
-        chan_size = (freq[-1] - freq[0]) / lfrq
+    def set_freq(self, f_range=None):
+        """
+        Sets self.full_freq, the "likely" full frequency range (either the
+            first one or shared one, if used.)
+        Sets self.freq_space, the frequencies used.
+        Makes f_range a class variable self.f_range, updating if supplied None
+        Sets class variable self.chan_size
+        Sets class variable self.lo_chan:  index in full_freq of lowest freq
+        Sets class variable self.hi_chan:  index in full_freq of highest freq
+
+        Parameters:
+        ------------
+        f_range:  desired frequency range.  If None, uses entire full_freq array
+        """
+        self.full_freq = self.rid.feature_sets[self.feature_keys[0]].freq  # chose first one
+        if self.full_freq == '@':  # share_freq was set
+            self.full_freq = self.rid.freq
+        lfrq = len(self.full_freq)
+        self.chan_size = (self.full_freq[-1] - self.full_freq[0]) / lfrq
         if f_range is None:
-            f_range = [freq[0], freq[-1]]
+            f_range = [self.full_freq[0], self.full_freq[-1]]
             lo_chan = 0
             hi_chan = -1
         else:
-            ch = (freq[-1] - freq[0]) / lfrq
-            if f_range[0] < freq[0]:
+            ch = (self.full_freq[-1] - self.full_freq[0]) / lfrq
+            if f_range[0] < self.full_freq[0]:
                 lo_chan = 0
             else:
-                lo_chan = int((f_range[0] - freq[0]) / chan_size)
-            if f_range[1] > freq[-1]:
+                lo_chan = int((f_range[0] - self.full_freq[0]) / self.chan_size)
+            if f_range[1] > self.full_freq[-1]:
                 hi_chan = -1
             else:
-                hi_chan = int((f_range[1] - freq[0]) / chan_size)
-        return freq, lo_chan, hi_chan
+                hi_chan = int((f_range[1] - self.full_freq[0]) / self.chan_size)
+        self.f_range = f_range
+        self.lo_chan = lo_chan
+        self.hi_chan = hi_chan
+        self.freq_space = freq[lo_chan:hi_chan]
 
-    def raw_data_plot(self, rid, feature_components, plot_type='waterfall', f_range=None, t_range=None,
-                      wf_time_fill=None, legend=False, keys=None, all_same_plot=False):
+    def set_time_range(self, t_range=None):
         """
-        Give a date range to make a waterfall with whatever raw data is in the file, or in specific keys
+        Makes t_range a class variable self.t_range, updating if supplied None
+        Sets self.time_0
+        Sets self.time_N
+        Sets self.duration
+        Sets self.ts_unit
+
+        Parameters:
+        ------------
+        t_range:  time range, if None uses all.
         """
-        feature_keys = self.get_feature_set_keys(rid, keys=keys)
-        t0 = rid.get_datetime_from_timestamp(spectrum_peak._get_timestr_from_ftr_key(feature_keys[0]))
-        tn = rid.get_datetime_from_timestamp(spectrum_peak._get_timestr_from_ftr_key(feature_keys[-1]))
+        t0 = self.rid.get_datetime_from_timestamp(spectrum_peak._get_timestr_from_ftr_key(self.feature_keys[0]))
+        tn = self.rid.get_datetime_from_timestamp(spectrum_peak._get_timestr_from_ftr_key(self.feature_keys[-1]))
         print("Data span {} - {}".format(t0, tn))
-        duration, ts_unit = sp_utils.get_duration_in_std_units((tn - t0).total_seconds())
+        self.duration, self.ts_unit = sp_utils.get_duration_in_std_units((tn - t0).total_seconds())
         if t_range is None:
             t_range = [0, duration]
-        freq, lo_chan, hi_chan = self.get_freq_chan(rid, feature_keys, f_range=f_range)
-        lfrq = len(freq)
-        freq_space = freq[lo_chan:hi_chan]
+        self.t_range = t_range
+        self.time_0 = t0
+        self.time_N = tn
 
-        # Get time and final key list
-        time_space = {}
-        used_keys = {}
-        nominal_t_step = 1E6
+    def time_filter(self):
+        """
+        Gets the final time-filtered keys to use.
+        Sets self.time_space, the time space used
+        Sets self.used_keys, the keys used
+        Sets self.nominal_t_step, the time step (nominal)
+        """
+        self.time_space = {}
+        self.used_keys = {}
+        self.nominal_t_step = 1E6
         for fc in feature_components:
-            time_space[fc] = []
-            used_keys[fc] = []
-            for i, fs in enumerate(feature_keys):
-                ts = (rid.get_datetime_from_timestamp(spectrum_peak._get_timestr_from_ftr_key(fs)) - t0).total_seconds()
-                ts, x = sp_utils.get_duration_in_std_units(ts, use_unit=ts_unit)
-                if ts < t_range[0] or ts > t_range[1]:
+            self.time_space[fc] = []
+            self.used_keys[fc] = []
+            for i, fs in enumerate(self.feature_keys):
+                ts = (self.rid.get_datetime_from_timestamp(spectrum_peak._get_timestr_from_ftr_key(fs)) - self.time_0).total_seconds()
+                ts, x = sp_utils.get_duration_in_std_units(ts, use_unit=self.ts_unit)
+                if ts < self.t_range[0] or ts > self.t_range[1]:
                     continue
                 lents = len(time_space[fc])
-                time_space[fc].append(ts)
-                used_keys[fc].append(fs)
-                if lents and (ts - time_space[fc][i - 1]) < nominal_t_step:
-                    nominal_t_step = (ts - time_space[fc][i - 1])
+                self.time_space[fc].append(ts)
+                self.used_keys[fc].append(fs)
+                if lents and (ts - self.time_space[fc][i - 1]) < self.nominal_t_step:
+                    self.nominal_t_step = (ts - self.time_space[fc][i - 1])
 
-        # Get data and parameters
-        wf = {}
-        extrema = {}
+    def process(self, feature_components, wf_time_fill=None, show_edits=True):
+        self.wf = {}
+        self.extrema = {}
+        lfrq = len(self.freq_space)
         for fc in feature_components:
-            wf[fc] = []
-            extrema[fc] = {'f': Namespace(), 't': Namespace()}
+            self.wf[fc] = []
+            self.extrema[fc] = {'f': Namespace(), 't': Namespace()}
             fadd = []
             ftrunc = []
-            for i, fs in enumerate(used_keys[fc]):
-                x, y = spectrum_peak._spectrum_plotter(rid.feature_sets[fs].freq, getattr(rid.feature_sets[fs], fc), None)
+            for i, fs in enumerate(self.used_keys[fc]):
+                x, y = spectrum_peak._spectrum_plotter(self.rid.feature_sets[fs].freq, getattr(self.rid.feature_sets[fs], fc), None)
                 if x is None:
                     continue
                 if len(x) < lfrq:
                     fadd.append(lfrq - len(x))
                     yend = y[-1]
-                    for i in range(len(x), lfrq):
+                    for j in range(len(x), lfrq):
                         y.append(yend)
                 elif len(x) > lfrq:
                     ftrunc.append(len(x) - lfrq)
@@ -127,15 +166,19 @@ class SPHandling:
             extrema[fc]['t'].hi = sp_utils.get_duration_in_std_units((t_hi - t0).total_seconds(), use_unit=ts_unit)[0]
             extrema[fc]['f'].lo = freq[lo_chan]
             extrema[fc]['f'].hi = freq[hi_chan]
+            plt.figure('max')
+            plt.plot(fadd)
             if len(fadd):
-                print("{}: had to add to {} spectra".format(fc, len(fadd)))
-                print("{} ... {}".format(fadd[0], fadd[-1]))
+                print("{}: had to add to {} spectra (max {})".format(fc, len(fadd), max(fadd)))
             if len(ftrunc):
-                print("{}: had to truncate {} spectra".format(fc, len(ftrunc)))
-                print("{} ... {}".format(ftrunc[0], ftrunc[-1]))
+                print("{}: had to truncate {} spectra (max {})".format(fc, len(ftrunc), max(ftrunc)))
 
-        # plot data (waterfall) - and return
-        if plot_type == 'waterfall':
+    def raw_waterfall_plot(self, feature_components, wf_time_fill=None):
+        """
+        Give a date range to make a waterfall with whatever raw data is in the file, or in specific keys
+        """
+        # Get data and parameters
+
             for fc in feature_components:
                 lims = [extrema[fc]['f'].lo, extrema[fc]['f'].hi, extrema[fc]['t'].hi, extrema[fc]['t'].lo]
                 plt.figure(fc)
@@ -143,24 +186,24 @@ class SPHandling:
                 plt.xlabel('Freq [{}]'.format(rid.freq_unit))
                 plt.ylabel('{} after {}'.format(ts_unit, t0))
                 plt.colorbar()
-            return
 
+    def raw_2D_plot(self, feature_components, plot_type, legend=False, all_same_plot=False):
         # plot data (other)
         for fc in feature_components:
             if not all_same_plot:
                 plt.figure(fc)
             if plot_type == 'stream':
-                for i, f in enumerate(freq_space):
-                    freq_label = "{:.3f} {}".format(f, rid.freq_unit)
+                for i, f in enumerate(self.freq_space):
+                    freq_label = "{:.3f} {}".format(f, self.rid.freq_unit)
                     if all_same_plot:
                         freq_label = fc + ': ' + freq_label
-                    plt.plot(time_space[fc], wf[fc][:, i], label=freq_label)
-                print("Number of plots: {}".format(len(freq_space)))
-                plt.xlabel('{} after {}'.format(ts_unit, t0))
-                plt.ylabel('Power [{}]'.format(rid.val_unit))
+                    plt.plot(self.time_space[fc], self.wf[fc][:, i], label=freq_label)
+                print("Number of plots: {}".format(len(self.freq_space)))
+                plt.xlabel('{} after {}'.format(self.ts_unit, self.time_0))
+                plt.ylabel('Power [{}]'.format(self.rid.val_unit))
             elif plot_type == 'stack':
-                for i, ts in enumerate(time_space):
-                    if keys is None:
+                for i, ts in enumerate(self.time_space):
+                    if self.specific_keys is None:
                         time_label = "{:.4f} {}".format(ts, ts_unit)
                     else:
                         time_label = used_keys[i]
@@ -172,3 +215,12 @@ class SPHandling:
                 plt.ylabel('Power [{}]'.format(rid.val_unit))
             if legend:
                 plt.legend()
+
+    def raw_totalpower_plot(self):
+        # plot total power - and return
+        # !!!THIS MODULE IS NOW __WAY__ TOO BIG!!!
+        if plot_type == 'total_power':
+            plt.figure('Total Power')
+            for fc in feature_components:
+                print(fc)
+            return
