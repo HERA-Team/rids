@@ -173,7 +173,8 @@ class SPHandling:
                 elif len(x) > lfrq:
                     ftrunc.append(len(x) - lfrq)
                     y = y[:lfrq]
-                tp = 10.0 * np.log10(np.sum(np.power(10.0, np.array(y) / 10.0)))
+                xxx = np.array(y)[self.lo_chan:self.hi_chan]
+                tp = 10.0 * np.log10(np.sum(np.power(10.0, np.array(xxx) / 10.0)))
                 self.total_power[fc].append(tp)
                 if i and wf_time_fill is not None:
                     delta_t = self.time_space[fc][i] - self.time_space[fc][i - 1]
