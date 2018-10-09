@@ -238,3 +238,5 @@ class SPHandling:
         plt.figure('Total Power')
         for fc in self.feature_components:
             plt.plot(self.time_space[fc], self.total_power[fc])
+        plt.xlabel('{} after {}'.format(self.ts_unit, self.time_0))
+        plt.ylabel('Power [{}]'.format(self.rid.val_unit))
