@@ -16,13 +16,13 @@ ap.add_argument('-w', '--wf', help="plot raw_data feature components as waterfal
 ap.add_argument('--stack', help="plot raw_data feature components as stack in that file ( '' or csv list)", default=None)
 ap.add_argument('--stream', help="plot raw_data as time streams in that file ( '' or csv list)", default=None)
 ap.add_argument('--totalpower', help="plot total power", default=None)
-ap.add_argument('-f', '--f_range', help="range in freq for plots (min,max)", default=None)
-ap.add_argument('-t', '--t_range', help="range in time for plots (min,max)", default=None)
+ap.add_argument('-f', '--f-range', dest='f_range', help="range in freq for plots (min,max)", default=None)
+ap.add_argument('-t', '--t-range', dest='t_range', help="range in time for plots (min,max)", default=None)
 ap.add_argument('-l', '--legend', help="include a legend on stack/stream plots", action='store_true')
 ap.add_argument('-k', '--keys', help="plot specific keys - generally use with stack (key1,key2,...)", default=None)
-ap.add_argument('--all_same_plot', help="put different feature components on same plot (not wf)", action='store_true')
-ap.add_argument('--suppress_wf_gaps', help="flag to ignore time gaps in wf plot [the time-scale won't match", action='store_true')
-ap.add_argument('--wf_time_fill', help="value or scheme to use for missing values if not suppress_wf_gaps", default='default')
+ap.add_argument('--all-same-plot', dest='all_same_plot', help="put different feature components on same plot (not wf)", action='store_true')
+ap.add_argument('--hide-gaps', dest='wf_gaps', help="flag to ignore time gaps in wf plot [the time-scale won't match", action='store_false')
+ap.add_argument('--wf-fill', dest='wf_time_fill', help="value or scheme to use for missing values if showing wf_gaps", default='default')
 ap.add_argument('--show-edits', dest='show_edits', help="Flag to display info on what was needed to make arrays same length.", action='store_true')
 
 args = ap.parse_args()
@@ -50,9 +50,7 @@ if args.stream is not None:
 if args.totalpower is not None:
     args.totalpower = args.totalpower.split(',')
 
-if args.suppress_wf_gaps:
-    args.wf_time_fill = None
-else:
+if args.wf_gaps:
     try:
         args.wf_time_fill = float(args.wf_time_fill)
     except ValueError:
@@ -63,6 +61,9 @@ else:
             import sys
             print("Invalid wf_time_fill:  {}".format(args.wf_time_fill))
             sys.exit()
+else:
+    args.wf_time_fill = None
+
 
 if __name__ == '__main__':
     # Read in data
