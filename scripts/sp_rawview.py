@@ -88,6 +88,6 @@ if __name__ == '__main__':
         s.raw_2D_plot(plot_type='stream', legend=args.legend, all_same_plot=args.all_same_plot)
     if args.totalpower is not None:
         s.time_filter(args.totalpower)
-        s.process(show_edits=args.show_edits)
+        s.process(show_edits=args.show_edits, total_power_only=True)
         s.raw_totalpower_plot()
     plt.show()

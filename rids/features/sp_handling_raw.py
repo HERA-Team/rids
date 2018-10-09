@@ -26,6 +26,7 @@ class SPHandling:
 
     def set_feature_keys(self, keys=None):
         """
+        Finds the keys corresponding to spectra, or checks/sorts a given list.
         Sets self.feature_keys, the sorted list of keys of _spectrum_ data.
         Sets self.specific_keys to True, if keys provided and fewer than 10.  Used for plotting legend
 
@@ -35,7 +36,7 @@ class SPHandling:
         """
         self.specific_keys = False
         if isinstance(keys, six.string_types):
-            keys = [keys]
+            keys = keys.split(',')
         if keys is None or keys[0] == 'all':
             sorted_ftr_keys = sorted(self.rid.feature_sets.keys())
         else:
@@ -132,7 +133,7 @@ class SPHandling:
                 if lents and (ts - self.time_space[fc][i - 1]) < self.nominal_t_step:
                     self.nominal_t_step = (ts - self.time_space[fc][i - 1])
 
-    def process(self, wf_time_fill=None, show_edits=True):
+    def process(self, wf_time_fill=None, show_edits=True, total_power_only=False):
         """
         Process the rid data to make the plots.
         Sets self.wf:  all of the data in waterfall format
@@ -144,14 +145,19 @@ class SPHandling:
         feature_components:  feature components to use
         wf_file_fill:  value to use if wish to/need to fill in gaps in the data for waterfall plot.
         show_edits:  If True, shows the plot of what it did to make the waterfall columns align.
+        total_power_only:  if True, it doesn't make/save the wf plot (if memory an issue)
         """
-        self.wf = {}
-        self.extrema = {}
+        if total_power_only:
+            wf_time_fill = None
+        else:
+            self.wf = {}
+            self.extrema = {}
         self.total_power = {}
         lfrq = len(self.full_freq)
         for fc in self.feature_components:
-            self.wf[fc] = []
-            self.extrema[fc] = {'f': Namespace(), 't': Namespace()}
+            if not total_power_only:
+                self.wf[fc] = []
+                self.extrema[fc] = {'f': Namespace(), 't': Namespace()}
             self.total_power[fc] = []
             fadd = []
             ftrunc = []
@@ -175,14 +181,16 @@ class SPHandling:
                         num_missing = int(delta_t / self.nominal_t_step)
                         for j in range(num_missing):
                             self.wf[fc].append(wf_time_fill * np.ones(len(self.freq_space)))
-                self.wf[fc].append(y[self.lo_chan:self.hi_chan])
-            self.wf[fc] = np.array(self.wf[fc])
-            t_lo = self.rid.get_datetime_from_timestamp(spectrum_peak._get_timestr_from_ftr_key(self.used_keys[fc][0]))
-            t_hi = self.rid.get_datetime_from_timestamp(spectrum_peak._get_timestr_from_ftr_key(self.used_keys[fc][-1]))
-            self.extrema[fc]['t'].lo = sp_utils.get_duration_in_std_units((t_lo - self.time_0).total_seconds(), use_unit=self.ts_unit)[0]
-            self.extrema[fc]['t'].hi = sp_utils.get_duration_in_std_units((t_hi - self.time_0).total_seconds(), use_unit=self.ts_unit)[0]
-            self.extrema[fc]['f'].lo = self.full_freq[self.lo_chan]
-            self.extrema[fc]['f'].hi = self.full_freq[self.hi_chan]
+                if not total_power_only:
+                    self.wf[fc].append(y[self.lo_chan:self.hi_chan])
+            if not total_power_only:
+                self.wf[fc] = np.array(self.wf[fc])
+                t_lo = self.rid.get_datetime_from_timestamp(spectrum_peak._get_timestr_from_ftr_key(self.used_keys[fc][0]))
+                t_hi = self.rid.get_datetime_from_timestamp(spectrum_peak._get_timestr_from_ftr_key(self.used_keys[fc][-1]))
+                self.extrema[fc]['t'].lo = sp_utils.get_duration_in_std_units((t_lo - self.time_0).total_seconds(), use_unit=self.ts_unit)[0]
+                self.extrema[fc]['t'].hi = sp_utils.get_duration_in_std_units((t_hi - self.time_0).total_seconds(), use_unit=self.ts_unit)[0]
+                self.extrema[fc]['f'].lo = self.full_freq[self.lo_chan]
+                self.extrema[fc]['f'].hi = self.full_freq[self.hi_chan]
             if show_edits:
                 plt.figure('max')
                 plt.plot(fadd)
