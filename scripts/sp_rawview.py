@@ -69,15 +69,17 @@ if __name__ == '__main__':
     s.set_feature_keys(keys=args.keys)
     s.set_freq(f_range=args.f_range)
     s.set_time_range(t_range=args.t_range)
-    s.time_filter()
     # Plot it
     if args.wf is not None:
-        s.process(args.wf, wf_time_file=args.wf_time_fill, show_edits=args.show_edits)
+        s.time_filter(args.wf)
+        s.process(wf_time_fill=args.wf_time_fill, show_edits=args.show_edits)
         s.raw_waterfall_plot()
     if args.stack is not None:
-        s.process(args.stack, show_edits=args.show_edits)
+        s.time_filter(args.stack)
+        s.process(show_edits=args.show_edits)
         s.raw_2D_plot(plot_type='stack', legend=args.legend, all_same_plot=args.all_same_plot)
     if args.stream is not None:
-        s.process(args.stream, show_edits=args.show_edits)
+        s.time_filter(args.stream)
+        s.process(show_edits=args.show_edits)
         s.raw_2D_plot(plot_type='stream', legend=args.legend, all_same_plot=args.all_same_plot)
     plt.show()
