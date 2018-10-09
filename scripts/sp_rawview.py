@@ -15,7 +15,7 @@ ap.add_argument('file', help="file(s) to use.  If non-RID file, will read in fil
 ap.add_argument('-w', '--wf', help="plot raw_data feature components as waterfall in that file ('val', 'maxhold', or 'minhold')", default=None)
 ap.add_argument('--stack', help="plot raw_data feature components as stack in that file ( '' or csv list)", default=None)
 ap.add_argument('--stream', help="plot raw_data as time streams in that file ( '' or csv list)", default=None)
-ap.add_argument('--totalpower', help="plot total power", default='None')
+ap.add_argument('--totalpower', help="plot total power", default=None)
 ap.add_argument('-f', '--f_range', help="range in freq for plots (min,max)", default=None)
 ap.add_argument('-t', '--t_range', help="range in time for plots (min,max)", default=None)
 ap.add_argument('-l', '--legend', help="include a legend on stack/stream plots", action='store_true')

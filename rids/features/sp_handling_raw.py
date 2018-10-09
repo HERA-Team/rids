@@ -167,7 +167,8 @@ class SPHandling:
                 elif len(x) > lfrq:
                     ftrunc.append(len(x) - lfrq)
                     y = y[:lfrq]
-                self.total_power[fc].append(np.sum(np.array(y)))
+                tp = 10.0 * np.log10(np.sum(np.power(10.0, np.array(y) / 10.0)))
+                self.total_power[fc].append(tp)
                 if i and wf_time_fill is not None:
                     delta_t = self.time_space[fc][i] - self.time_space[fc][i - 1]
                     if delta_t > 1.2 * self.nominal_t_step:
@@ -236,4 +237,4 @@ class SPHandling:
     def raw_totalpower_plot(self, legend=False):
         plt.figure('Total Power')
         for fc in self.feature_components:
-            plt.plot(self.time_space, self.total_power[fc])
+            plt.plot(self.time_space[fc], self.total_power[fc])
