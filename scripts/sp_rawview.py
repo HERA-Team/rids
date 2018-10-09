@@ -15,6 +15,7 @@ ap.add_argument('file', help="file(s) to use.  If non-RID file, will read in fil
 ap.add_argument('-w', '--wf', help="plot raw_data feature components as waterfall in that file ('val', 'maxhold', or 'minhold')", default=None)
 ap.add_argument('--stack', help="plot raw_data feature components as stack in that file ( '' or csv list)", default=None)
 ap.add_argument('--stream', help="plot raw_data as time streams in that file ( '' or csv list)", default=None)
+ap.add_argument('--totalpower', help="plot total power", default='None')
 ap.add_argument('-f', '--f_range', help="range in freq for plots (min,max)", default=None)
 ap.add_argument('-t', '--t_range', help="range in time for plots (min,max)", default=None)
 ap.add_argument('-l', '--legend', help="include a legend on stack/stream plots", action='store_true')
@@ -45,6 +46,9 @@ if args.stack is not None:
 
 if args.stream is not None:
     args.stream = args.stream.split(',')
+
+if args.totalpower is not None:
+    args.totalpower = args.totalpower.split(',')
 
 if args.suppress_wf_gaps:
     args.wf_time_fill = None
@@ -82,4 +86,8 @@ if __name__ == '__main__':
         s.time_filter(args.stream)
         s.process(show_edits=args.show_edits)
         s.raw_2D_plot(plot_type='stream', legend=args.legend, all_same_plot=args.all_same_plot)
+    if args.totalpower is not None:
+        s.time_filter(args.totalpower)
+        s.process(show_edits=args.show_edits)
+        s.raw_totalpower_plot()
     plt.show()

@@ -147,10 +147,12 @@ class SPHandling:
         """
         self.wf = {}
         self.extrema = {}
+        self.total_power = {}
         lfrq = len(self.full_freq)
         for fc in self.feature_components:
             self.wf[fc] = []
             self.extrema[fc] = {'f': Namespace(), 't': Namespace()}
+            self.total_power[fc] = []
             fadd = []
             ftrunc = []
             for i, fs in enumerate(self.used_keys[fc]):
@@ -165,6 +167,7 @@ class SPHandling:
                 elif len(x) > lfrq:
                     ftrunc.append(len(x) - lfrq)
                     y = y[:lfrq]
+                self.total_power[fc].append(np.sum(np.array(y)))
                 if i and wf_time_fill is not None:
                     delta_t = self.time_space[fc][i] - self.time_space[fc][i - 1]
                     if delta_t > 1.2 * self.nominal_t_step:
@@ -230,11 +233,7 @@ class SPHandling:
             if legend:
                 plt.legend()
 
-    def raw_totalpower_plot(self):
-        # plot total power - and return
-        # !!!THIS MODULE IS NOW __WAY__ TOO BIG!!!
-        if plot_type == 'total_power':
-            plt.figure('Total Power')
-            for fc in feature_components:
-                print(fc)
-            return
+    def raw_totalpower_plot(self, legend=False):
+        plt.figure('Total Power')
+        for fc in self.feature_components:
+            plt.plot(self.time_space, self.total_power[fc])
