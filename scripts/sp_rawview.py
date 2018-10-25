@@ -58,7 +58,6 @@ if args.wf_gaps:
         args.wf_time_fill = float(args.wf_time_fill)
     except ValueError:
         if args.wf_time_fill == 'default':
-            print("Need to properly do this, but for now = 0.0")
             args.wf_time_fill = 0.0
         else:
             import sys
