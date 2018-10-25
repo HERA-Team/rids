@@ -221,7 +221,7 @@ class SPHandling:
         for fc in self.feature_components:
             if not all_same_plot:
                 plt.figure(fc)
-            elif title is not None:
+            if title is not None:
                 plt.title(title)
             if plot_type == 'stream':
                 for i, f in enumerate(self.freq_space):

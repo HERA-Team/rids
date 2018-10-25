@@ -9,8 +9,8 @@ import os.path
 import matplotlib.pyplot as plt
 
 from rids import features
-
 ap = argparse.ArgumentParser()
+
 ap.add_argument('file', help="file(s) to use.  If non-RID file, will read in filenames contained in that file.", default=None)
 ap.add_argument('-w', '--wf', help="plot raw_data feature components as waterfall in that file ('val', 'maxhold', or 'minhold')", default=None)
 ap.add_argument('--stack', help="plot raw_data feature components as stack in that file ( '' or csv list)", default=None)
@@ -26,7 +26,6 @@ ap.add_argument('--wf-fill', dest='wf_time_fill', help="value or scheme to use f
 ap.add_argument('--show-edits', dest='show_edits', help="Flag to display info on what was needed to make arrays same length.", action='store_true')
 # Only used in script
 ap.add_argument('--hide-gaps', dest='wf_gaps', help="flag to ignore time gaps in wf plot [the time-scale won't match", action='store_false')
-
 
 args = ap.parse_args()
 
@@ -66,31 +65,29 @@ if args.wf_gaps:
 else:
     args.wf_time_fill = None
 
-
-if __name__ == '__main__':
-    # Read in data
-    r = features.spectrum_peak.SpectrumPeak()
-    r.reader(args.file)
-    # Set up data parameters for plot
-    s = features.sp_handling_raw.SPHandling(r)
-    s.set_feature_keys(keys=args.keys)
-    s.set_freq(f_range=args.f_range)
-    s.set_time_range(t_range=args.t_range)
-    # Plot it
-    if args.wf is not None:
-        s.time_filter(args.wf)
-        s.process(wf_time_fill=args.wf_time_fill, show_edits=args.show_edits)
-        s.raw_waterfall_plot(title=args.title)
-    if args.stack is not None:
-        s.time_filter(args.stack)
-        s.process(show_edits=args.show_edits)
-        s.raw_2D_plot(plot_type='stack', legend=args.legend, all_same_plot=args.all_same_plot, title=args.title)
-    if args.stream is not None:
-        s.time_filter(args.stream)
-        s.process(show_edits=args.show_edits)
-        s.raw_2D_plot(plot_type='stream', legend=args.legend, all_same_plot=args.all_same_plot, title=args.title)
-    if args.totalpower is not None:
-        s.time_filter(args.totalpower)
-        s.process(show_edits=args.show_edits, total_power_only=True)
-        s.raw_totalpower_plot(title=args.title)
-    plt.show()
+# Read in data
+r = features.spectrum_peak.SpectrumPeak()
+r.reader(args.file)
+# Set up data parameters for plot
+s = features.sp_handling_raw.SPHandling(r)
+s.set_feature_keys(keys=args.keys)
+s.set_freq(f_range=args.f_range)
+s.set_time_range(t_range=args.t_range)
+# Plot it
+if args.wf is not None:
+    s.time_filter(args.wf)
+    s.process(wf_time_fill=args.wf_time_fill, show_edits=args.show_edits)
+    s.raw_waterfall_plot(title=args.title)
+if args.stack is not None:
+    s.time_filter(args.stack)
+    s.process(show_edits=args.show_edits)
+    s.raw_2D_plot(plot_type='stack', legend=args.legend, all_same_plot=args.all_same_plot, title=args.title)
+if args.stream is not None:
+    s.time_filter(args.stream)
+    s.process(show_edits=args.show_edits)
+    s.raw_2D_plot(plot_type='stream', legend=args.legend, all_same_plot=args.all_same_plot, title=args.title)
+if args.totalpower is not None:
+    s.time_filter(args.totalpower)
+    s.process(show_edits=args.show_edits, total_power_only=True)
+    s.raw_totalpower_plot(title=args.title)
+plt.show()
