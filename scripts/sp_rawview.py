@@ -20,6 +20,7 @@ ap.add_argument('-f', '--f-range', dest='f_range', help="range in freq for plots
 ap.add_argument('-t', '--t-range', dest='t_range', help="range in time for plots (min,max)", default=None)
 ap.add_argument('-l', '--legend', help="include a legend on stack/stream plots", action='store_true')
 ap.add_argument('-k', '--keys', help="plot specific keys - generally use with stack (key1,key2,...)", default=None)
+ap.add_argument('--title', help="plot title", default=None)
 ap.add_argument('--all-same-plot', dest='all_same_plot', help="put different feature components on same plot (not wf)", action='store_true')
 ap.add_argument('--wf-fill', dest='wf_time_fill', help="value or scheme to use for missing values if showing wf_gaps", default='default')
 ap.add_argument('--show-edits', dest='show_edits', help="Flag to display info on what was needed to make arrays same length.", action='store_true')
@@ -80,17 +81,17 @@ if __name__ == '__main__':
     if args.wf is not None:
         s.time_filter(args.wf)
         s.process(wf_time_fill=args.wf_time_fill, show_edits=args.show_edits)
-        s.raw_waterfall_plot()
+        s.raw_waterfall_plot(title=args.title)
     if args.stack is not None:
         s.time_filter(args.stack)
         s.process(show_edits=args.show_edits)
-        s.raw_2D_plot(plot_type='stack', legend=args.legend, all_same_plot=args.all_same_plot)
+        s.raw_2D_plot(plot_type='stack', legend=args.legend, all_same_plot=args.all_same_plot, title=args.title)
     if args.stream is not None:
         s.time_filter(args.stream)
         s.process(show_edits=args.show_edits)
-        s.raw_2D_plot(plot_type='stream', legend=args.legend, all_same_plot=args.all_same_plot)
+        s.raw_2D_plot(plot_type='stream', legend=args.legend, all_same_plot=args.all_same_plot, title=args.title)
     if args.totalpower is not None:
         s.time_filter(args.totalpower)
         s.process(show_edits=args.show_edits, total_power_only=True)
-        s.raw_totalpower_plot()
+        s.raw_totalpower_plot(title=args.title)
     plt.show()

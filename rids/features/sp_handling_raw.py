@@ -200,7 +200,7 @@ class SPHandling:
                 if len(ftrunc):
                     print("{}: had to truncate {} spectra (max {})".format(fc, len(ftrunc), max(ftrunc)))
 
-    def raw_waterfall_plot(self):
+    def raw_waterfall_plot(self, title=None):
         """
         Plots the full waterfall
         """
@@ -209,16 +209,20 @@ class SPHandling:
         for fc in self.feature_components:
             lims = [self.extrema[fc]['f'].lo, self.extrema[fc]['f'].hi, self.extrema[fc]['t'].hi, self.extrema[fc]['t'].lo]
             plt.figure(fc)
+            if title is not None:
+                plt.title(title)
             plt.imshow(self.wf[fc], aspect='auto', extent=lims)
             plt.xlabel('Freq [{}]'.format(self.rid.freq_unit))
             plt.ylabel('{} after {}'.format(self.ts_unit, self.time_0))
             plt.colorbar()
 
-    def raw_2D_plot(self, plot_type, legend=False, all_same_plot=False):
+    def raw_2D_plot(self, plot_type, legend=False, all_same_plot=False, title=None):
         # plot data (other)
         for fc in self.feature_components:
             if not all_same_plot:
                 plt.figure(fc)
+            elif title is not None:
+                plt.title(title)
             if plot_type == 'stream':
                 for i, f in enumerate(self.freq_space):
                     freq_label = "{:.3f} {}".format(f, self.rid.freq_unit)
@@ -243,8 +247,10 @@ class SPHandling:
             if legend:
                 plt.legend()
 
-    def raw_totalpower_plot(self, legend=False):
+    def raw_totalpower_plot(self, legend=False, title=None):
         plt.figure('Total Power')
+        if title is not None:
+            plt.title(title)
         for fc in self.feature_components:
             plt.plot(self.time_space[fc], self.total_power[fc])
         plt.xlabel('{} after {}'.format(self.ts_unit, self.time_0))
