@@ -108,15 +108,19 @@ class SPHandling:
             return
         if not isinstance(t_range, list):
             raise ValueError("t_range can't be {}".format(type(t_range)))
-        elif not isinstance(t_range[0], datetime.datetime) or not isinstance(t_range[1], datetime.datetime):
+        if t_range[0] is None:
+            t_range[0] = t0
+        if t_range[1] is None:
+            t_range[1] = tn
+        if not isinstance(t_range[0], datetime.datetime) or not isinstance(t_range[1], datetime.datetime):
             raise ValueError("t_range types must be datetimes")
-        elif t_range[0] < t0:
+        if t_range[0] < t0:
             print("Requested time before data.  Setting start time to {}".format(t0))
             t_range[0] = t0
         elif t_range[1] > tn:
             print("Requested time after data.  Setting stop time to {}".format(tn))
             t_range[1] = tn
-        elif t_range[0] > tn or t_range[1] > t0:
+        elif t_range[0] > tn or t_range[1] < t0:
             raise ValueError("Times not spanned by data.")
         self.t_range = t_range
 
@@ -144,9 +148,9 @@ class SPHandling:
                     continue
                 self.used_keys[fc].append(fs)
                 self.time_space[fc].append(ts)
-                if i:
-                    self.delta_t[fc].append((self.time_space[fc][i] - self.time_space[fc][i - 1]).total_seconds())
-                    self.t_elapsed[fc].append((self.time_space[fc][i] - self.time_space[fc][0]).total_seconds())
+                if len(self.time_space[fc]) > 1:
+                    self.delta_t[fc].append((self.time_space[fc][-1] - self.time_space[fc][-2]).total_seconds())
+                    self.t_elapsed[fc].append((self.time_space[fc][-1] - self.time_space[fc][0]).total_seconds())
             self.delta_t[fc] = np.array(self.delta_t[fc])
 
     def process(self, wf_time_fill=None, show_edits=True, total_power_only=False):
