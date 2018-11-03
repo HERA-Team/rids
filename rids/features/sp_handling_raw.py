@@ -16,6 +16,7 @@ from argparse import Namespace
 import numpy as np
 import matplotlib.pyplot as plt
 import six
+import datetime
 
 
 class SPHandling:
@@ -89,24 +90,35 @@ class SPHandling:
     def set_time_range(self, t_range=None):
         """
         Makes t_range a class variable self.t_range, updating if supplied None
-        Sets self.time_0 as earliest supplied datetime
-        Sets self.time_N as latest supplied datetime
-        Sets self.duration total duration of above in seconds
-        Sets self.ts_unit 
+            Sets self.time_0 as earliest supplied datetime
+            Sets self.time_N as latest supplied datetime
+            Sets self.t_range, range to plot as datetime pair
 
         Parameters:
         ------------
-        t_range:  time range, if None uses all.
+        t_range:  time range, as datetime.datetime
         """
         t0 = self.rid.get_datetime_from_timestamp(spectrum_peak._get_timestr_from_ftr_key(self.feature_keys[0]))
         tn = self.rid.get_datetime_from_timestamp(spectrum_peak._get_timestr_from_ftr_key(self.feature_keys[-1]))
-        print("Data span {} - {}".format(t0, tn))
-        self.duration, self.ts_unit = sp_utils.get_duration_in_std_units((tn - t0).total_seconds())
-        if t_range is None:
-            t_range = [0, self.duration]
-        self.t_range = t_range
         self.time_0 = t0
         self.time_N = tn
+        print("Total data span {} - {}".format(t0, tn))
+        if t_range is None:
+            self.t_range = [t0, tn]
+            return
+        if not isinstance(t_range, list):
+            raise ValueError("t_range can't be {}".format(type(t_range)))
+        elif not isinstance(t_range[0], datetime.datetime) or not isinstance(t_range[1], datetime.datetime):
+            raise ValueError("t_range types must be datetimes")
+        elif t_range[0] < t0:
+            print("Requested time before data.  Setting start time to {}".format(t0))
+            t_range[0] = t0
+        elif t_range[1] > tn:
+            print("Requested time after data.  Setting stop time to {}".format(tn))
+            t_range[1] = tn
+        elif t_range[0] > tn or t_range[1] > t0:
+            raise ValueError("Times not spanned by data.")
+        self.t_range = t_range
 
     def time_filter(self, feature_components):
         """
@@ -123,8 +135,7 @@ class SPHandling:
             self.time_space[fc] = []
             self.used_keys[fc] = []
             for i, fs in enumerate(self.feature_keys):
-                ts = (self.rid.get_datetime_from_timestamp(spectrum_peak._get_timestr_from_ftr_key(fs)) - self.time_0).total_seconds()
-                ts, x = sp_utils.get_duration_in_std_units(ts, use_unit=self.ts_unit)
+                ts = self.rid.get_datetime_from_timestamp(spectrum_peak._get_timestr_from_ftr_key(fs))
                 if ts < self.t_range[0] or ts > self.t_range[1]:
                     continue
                 lents = len(self.time_space[fc])
