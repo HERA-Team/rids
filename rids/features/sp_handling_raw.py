@@ -123,26 +123,21 @@ class SPHandling:
     def time_filter(self, feature_components):
         """
         Gets the final time-filtered keys to use.
-        Sets self.time_space, the time space used
         Sets self.used_keys, the keys used
-        Sets self.nominal_t_step, the time step (nominal)
+        Sets self.nominal_t_step, the time step (nominal for wf)
         """
         self.feature_components = feature_components
-        self.time_space = {}
         self.used_keys = {}
         self.nominal_t_step = 1E6
         for fc in feature_components:
-            self.time_space[fc] = []
             self.used_keys[fc] = []
             for i, fs in enumerate(self.feature_keys):
                 ts = self.rid.get_datetime_from_timestamp(spectrum_peak._get_timestr_from_ftr_key(fs))
                 if ts < self.t_range[0] or ts > self.t_range[1]:
                     continue
-                lents = len(self.time_space[fc])
-                self.time_space[fc].append(ts)
                 self.used_keys[fc].append(fs)
-                if lents and (ts - self.time_space[fc][i - 1]) < self.nominal_t_step:
-                    self.nominal_t_step = (ts - self.time_space[fc][i - 1])
+                if len(self.used_keys[fc]) and (ts - self.used_keys[fc][i - 1]) < self.nominal_t_step:
+                    self.nominal_t_step = (ts - self.used_keys[fc][i - 1])
 
     def process(self, wf_time_fill=None, show_edits=True, total_power_only=False):
         """
@@ -188,7 +183,7 @@ class SPHandling:
                 tp = 10.0 * np.log10(np.sum(np.power(10.0, np.array(xxx) / 10.0)))
                 self.total_power[fc].append(tp)
                 if i and wf_time_fill is not None:
-                    delta_t = self.time_space[fc][i] - self.time_space[fc][i - 1]
+                    delta_t = self.used_keys[fc][i] - self.used_keys[fc][i - 1]
                     if delta_t > 1.2 * self.nominal_t_step:
                         num_missing = int(delta_t / self.nominal_t_step)
                         for j in range(num_missing):
@@ -239,12 +234,12 @@ class SPHandling:
                     freq_label = "{:.3f} {}".format(f, self.rid.freq_unit)
                     if all_same_plot:
                         freq_label = fc + ': ' + freq_label
-                    plt.plot(self.time_space[fc], self.wf[fc][:, i], label=freq_label)
+                    plt.plot(self.used_keys[fc], self.wf[fc][:, i], label=freq_label)
                 print("Number of plots: {}".format(len(self.freq_space)))
                 plt.xlabel('{} after {}'.format(self.ts_unit, self.time_0))
                 plt.ylabel('Power [{}]'.format(self.rid.val_unit))
             elif plot_type == 'stack':
-                for i, ts in enumerate(self.time_space[fc]):
+                for i, ts in enumerate(self.used_keys[fc]):
                     if self.specific_keys:
                         time_label = self.used_keys[fc][i]
                     else:
@@ -252,7 +247,7 @@ class SPHandling:
                     if all_same_plot:
                         time_label = fc + ': ' + time_label
                     plt.plot(self.freq_space, self.wf[fc][i, :], label=time_label)
-                print("Number of plots: {}".format(len(self.time_space)))
+                print("Number of plots: {}".format(len(self.used_keys)))
                 plt.xlabel('Freq [{}]'.format(self.rid.freq_unit))
                 plt.ylabel('Power [{}]'.format(self.rid.val_unit))
             if legend:
@@ -263,6 +258,6 @@ class SPHandling:
         if title is not None:
             plt.title(title)
         for fc in self.feature_components:
-            plt.plot(self.time_space[fc], self.total_power[fc])
+            plt.plot(self.used_keys[fc], self.total_power[fc])
         plt.xlabel('{} after {}'.format(self.ts_unit, self.time_0))
         plt.ylabel('Power [{}]'.format(self.rid.val_unit))
