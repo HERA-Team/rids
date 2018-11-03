@@ -122,28 +122,37 @@ class SPHandling:
 
     def time_filter(self, feature_components):
         """
-        Gets the final time-filtered keys to use.
-        Sets self.used_keys, the keys used
-        Sets self.nominal_t_step, the time step (nominal for wf)
+        Gets the final time-filtered keys to use.  Sets:
+            self.used_keys: the keys used in the plot
+            self.time_space:  datetimes used in plot
+            self.delta_t:  timestep in sec
+            self.t_elapsed:  elapsed time since beginning of plot in sec
         """
         self.feature_components = feature_components
         self.used_keys = {}
-        self.nominal_t_step = 1E6
+        self.time_space = {}
+        self.delta_t = {}
+        self.t_elapsed = {}
         for fc in feature_components:
             self.used_keys[fc] = []
+            self.time_space[fc] = []
+            self.delta_t[fc] = [0.0]
+            self.t_elapsed[fc] = [0.0]
             for i, fs in enumerate(self.feature_keys):
                 ts = self.rid.get_datetime_from_timestamp(spectrum_peak._get_timestr_from_ftr_key(fs))
                 if ts < self.t_range[0] or ts > self.t_range[1]:
                     continue
                 self.used_keys[fc].append(fs)
-                if len(self.used_keys[fc]) and (ts - self.used_keys[fc][i - 1]) < self.nominal_t_step:
-                    self.nominal_t_step = (ts - self.used_keys[fc][i - 1])
+                self.time_space[fc].append(ts)
+                if i:
+                    self.delta_t[fc].append((self.time_space[fc][i] - self.time_space[fc][i - 1]).total_seconds())
+                    self.t_elapsed[fc].append((self.time_space[fc][i] - self.time_space[fc][0]).total_seconds())
+            self.delta_t[fc] = np.array(self.delta_t[fc])
 
     def process(self, wf_time_fill=None, show_edits=True, total_power_only=False):
         """
         Process the rid data to make the plots.
         Sets self.wf:  all of the data in waterfall format
-        Sets self.extrema:  time and freq extrema
         Sets self.feature_components:  makes global
 
         Parameters:
@@ -157,16 +166,16 @@ class SPHandling:
             wf_time_fill = None
         else:
             self.wf = {}
-            self.extrema = {}
         self.total_power = {}
         lfrq = len(self.full_freq)
         for fc in self.feature_components:
             if not total_power_only:
                 self.wf[fc] = []
-                self.extrema[fc] = {'f': Namespace(), 't': Namespace()}
             self.total_power[fc] = []
             fadd = []
             ftrunc = []
+            min_t_step = self.delta_t[fc][1:].min()
+            std_t_step = self.delta_t[fc][1:].std()
             for i, fs in enumerate(self.used_keys[fc]):
                 x, y = spectrum_peak._spectrum_plotter(self.rid.feature_sets[fs].freq, getattr(self.rid.feature_sets[fs], fc), None)
                 if x is None:
@@ -183,21 +192,14 @@ class SPHandling:
                 tp = 10.0 * np.log10(np.sum(np.power(10.0, np.array(xxx) / 10.0)))
                 self.total_power[fc].append(tp)
                 if i and wf_time_fill is not None:
-                    delta_t = self.used_keys[fc][i] - self.used_keys[fc][i - 1]
-                    if delta_t > 1.2 * self.nominal_t_step:
-                        num_missing = int(delta_t / self.nominal_t_step)
+                    if self.delta_t[fc][i] > min_t_step + std_t_step:
+                        num_missing = int(self.delta_t[fc][i] / min_t_step)
                         for j in range(num_missing):
                             self.wf[fc].append(wf_time_fill * np.ones(len(self.freq_space)))
                 if not total_power_only:
                     self.wf[fc].append(y[self.lo_chan:self.hi_chan])
             if not total_power_only:
                 self.wf[fc] = np.array(self.wf[fc])
-                t_lo = self.rid.get_datetime_from_timestamp(spectrum_peak._get_timestr_from_ftr_key(self.used_keys[fc][0]))
-                t_hi = self.rid.get_datetime_from_timestamp(spectrum_peak._get_timestr_from_ftr_key(self.used_keys[fc][-1]))
-                self.extrema[fc]['t'].lo = sp_utils.get_duration_in_std_units((t_lo - self.time_0).total_seconds(), use_unit=self.ts_unit)[0]
-                self.extrema[fc]['t'].hi = sp_utils.get_duration_in_std_units((t_hi - self.time_0).total_seconds(), use_unit=self.ts_unit)[0]
-                self.extrema[fc]['f'].lo = self.full_freq[self.lo_chan]
-                self.extrema[fc]['f'].hi = self.full_freq[self.hi_chan]
             if show_edits:
                 plt.figure('max')
                 plt.plot(fadd)
@@ -213,7 +215,7 @@ class SPHandling:
         # Get data and parameters
 
         for fc in self.feature_components:
-            lims = [self.extrema[fc]['f'].lo, self.extrema[fc]['f'].hi, self.extrema[fc]['t'].hi, self.extrema[fc]['t'].lo]
+            lims = [, , self.extrema[fc]['t'].hi, self.extrema[fc]['t'].lo]
             plt.figure(fc)
             if title is not None:
                 plt.title(title)
