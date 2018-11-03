@@ -215,13 +215,20 @@ class SPHandling:
         # Get data and parameters
 
         for fc in self.feature_components:
-            lims = [, , self.extrema[fc]['t'].hi, self.extrema[fc]['t'].lo]
+            t_lo = 0.0
+            t_hi = sp_utils.get_duration_in_std_units(self.t_elapsed[fc][-1])
+            ts_unit = t_hi[1]
+            t_hi = t_hi[0]
+            f_lo = self.full_freq[self.lo_chan]
+            f_hi = self.full_freq[self.hi_chan]
+            lims = [f_lo, f_hi, t_hi, t_lo]
             plt.figure(fc)
-            if title is not None:
-                plt.title(title)
+            if title is None:
+                title = '{} after {}'.format(ts_unit, self.time_space[fc][0])
+            plt.title(title)
             plt.imshow(self.wf[fc], aspect='auto', extent=lims)
             plt.xlabel('Freq [{}]'.format(self.rid.freq_unit))
-            plt.ylabel('{} after {}'.format(self.ts_unit, self.time_0))
+            plt.ylabel('{} after {}'.format(ts_unit, self.time_space[fc][0]))
             plt.colorbar()
 
     def raw_2D_plot(self, plot_type, legend=False, all_same_plot=False, title=None):
@@ -231,6 +238,7 @@ class SPHandling:
                 plt.figure(fc)
             if title is not None:
                 plt.title(title)
+            ts_unit = sp_utils.get_duration_in_std_units(self.t_elapsed[fc][-1])[1]
             if plot_type == 'stream':
                 for i, f in enumerate(self.freq_space):
                     freq_label = "{:.3f} {}".format(f, self.rid.freq_unit)
@@ -238,14 +246,14 @@ class SPHandling:
                         freq_label = fc + ': ' + freq_label
                     plt.plot(self.used_keys[fc], self.wf[fc][:, i], label=freq_label)
                 print("Number of plots: {}".format(len(self.freq_space)))
-                plt.xlabel('{} after {}'.format(self.ts_unit, self.time_0))
+                plt.xlabel('{} after {}'.format(ts_unit, self.time_space[fc][0]))
                 plt.ylabel('Power [{}]'.format(self.rid.val_unit))
             elif plot_type == 'stack':
                 for i, ts in enumerate(self.used_keys[fc]):
                     if self.specific_keys:
                         time_label = self.used_keys[fc][i]
                     else:
-                        time_label = "{:.4f} {}".format(ts, self.ts_unit)
+                        time_label = "{} {}".format(ts, ts_unit)
                     if all_same_plot:
                         time_label = fc + ': ' + time_label
                     plt.plot(self.freq_space, self.wf[fc][i, :], label=time_label)
@@ -259,7 +267,8 @@ class SPHandling:
         plt.figure('Total Power')
         if title is not None:
             plt.title(title)
+        ts_unit = sp_utils.get_duration_in_std_units(self.t_elapsed[fc][-1])[1]
         for fc in self.feature_components:
             plt.plot(self.used_keys[fc], self.total_power[fc])
-        plt.xlabel('{} after {}'.format(self.ts_unit, self.time_0))
+        plt.xlabel('{} after {}'.format(ts_unit, self.time_space[fc][0]))
         plt.ylabel('Power [{}]'.format(self.rid.val_unit))
