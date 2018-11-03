@@ -89,10 +89,10 @@ class SPHandling:
     def set_time_range(self, t_range=None):
         """
         Makes t_range a class variable self.t_range, updating if supplied None
-        Sets self.time_0
-        Sets self.time_N
-        Sets self.duration
-        Sets self.ts_unit
+        Sets self.time_0 as earliest supplied datetime
+        Sets self.time_N as latest supplied datetime
+        Sets self.duration total duration of above in seconds
+        Sets self.ts_unit 
 
         Parameters:
         ------------

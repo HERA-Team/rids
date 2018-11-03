@@ -10,6 +10,16 @@ from __future__ import print_function, absolute_import, division
 
 
 def get_duration_in_std_units(duration, use_unit=None):
+    """
+    Returns a duration in units based on either:
+        ad hoc defauls
+        specified units
+
+    Parameters:
+    ------------
+    duration:  duration in seconds
+    use_unit:  output unit - if None return default
+    """
     if use_unit is None:
         ts_unit = 'Sec'
         if duration > 400000.0:
