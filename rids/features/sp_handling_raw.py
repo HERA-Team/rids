@@ -150,7 +150,7 @@ class SPHandling:
                     if ts < self.t_range[0] or ts > self.t_range[1]:
                         continue
                 else:
-                    if ts > self.t_range[0] or ts < self.t_range[1]:
+                    if ts > self.t_range[0] and ts < self.t_range[1]:
                         continue
                 self.used_keys[fc].append(fs)
                 self.time_space[fc].append(ts)
