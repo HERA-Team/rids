@@ -24,6 +24,7 @@ ap.add_argument('--title', help="plot title", default=None)
 ap.add_argument('--all-same-plot', dest='all_same_plot', help="put different feature components on same plot (not wf)", action='store_true')
 ap.add_argument('--wf-fill', dest='wf_time_fill', help="value or scheme to use for missing values if showing wf_gaps", default='default')
 ap.add_argument('--show-edits', dest='show_edits', help="Flag to display info on what was needed to make arrays same length.", action='store_true')
+ap.add_argument('--flip', dest='flip_range', help="Flag to plot converse of t_range", action='store_true')
 # Only used in script
 ap.add_argument('-0', '--start-time', dest='start_time', help="start-time to use:  YY-MM-DD.HH:MM - default is data start", default=None)
 ap.add_argument('-1', '--stop-time', dest='stop_time', help="stop-time to use:  YY-MM-DD.HH:MM - default is data end", default=None)
@@ -79,7 +80,7 @@ r.reader(args.file)
 s = features.sp_handling_raw.SPHandling(r)
 s.set_feature_keys(keys=args.keys)
 s.set_freq(f_range=args.f_range)
-s.set_time_range(t_range=t_range)
+s.set_time_range(t_range=t_range, flip=args.flip_range)
 # Plot it
 if args.wf is not None:
     s.time_filter(args.wf)

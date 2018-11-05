@@ -87,7 +87,7 @@ class SPHandling:
         self.hi_chan = hi_chan
         self.freq_space = self.full_freq[lo_chan:hi_chan]
 
-    def set_time_range(self, t_range=None):
+    def set_time_range(self, t_range=None, flip=False):
         """
         Makes t_range a class variable self.t_range, updating if supplied None
             Sets self.time_0 as earliest supplied datetime
@@ -96,8 +96,10 @@ class SPHandling:
 
         Parameters:
         ------------
-        t_range:  time range, as datetime.datetime
+        t_range:  time range, as datetime.datetime list-pair
+        flip:  boolean to flip sense of time filter (don't plot within those)
         """
+        self.flip = flip
         t0 = self.rid.get_datetime_from_timestamp(spectrum_peak._get_timestr_from_ftr_key(self.feature_keys[0]))
         tn = self.rid.get_datetime_from_timestamp(spectrum_peak._get_timestr_from_ftr_key(self.feature_keys[-1]))
         self.time_0 = t0
@@ -144,8 +146,12 @@ class SPHandling:
             self.t_elapsed[fc] = [0.0]
             for i, fs in enumerate(self.feature_keys):
                 ts = self.rid.get_datetime_from_timestamp(spectrum_peak._get_timestr_from_ftr_key(fs))
-                if ts < self.t_range[0] or ts > self.t_range[1]:
-                    continue
+                if not self.flip:
+                    if ts < self.t_range[0] or ts > self.t_range[1]:
+                        continue
+                else:
+                    if ts > self.t_range[0] or ts < self.t_range[1]:
+                        continue
                 self.used_keys[fc].append(fs)
                 self.time_space[fc].append(ts)
                 if len(self.time_space[fc]) > 1:
