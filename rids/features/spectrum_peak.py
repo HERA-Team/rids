@@ -384,6 +384,80 @@ class SpectrumPeak(rids.Rids):
     def apply_cal(self):
         print("NOT IMPLEMENTED YET: Apply the calibration, if available.")
 
+    def process_poco(self, directory='.', ident=None, data=[0, -1], peak_on=None,
+                     data_only=False, sets_per_pol=10000, keep_data=False, show_progress=False):
+        """
+        This processes the poco npz files.
+
+        Parameters:
+        ------------
+        directory:  directory where files reside and ridz files get written
+        ident:  identifier for poco files to process
+        data:  indices of events to be saved as data spectra
+        peak_on:  feature_component on which to find peaks, default order if None
+        data_only:  flag if only saving data and not peaks
+        sets_per_pol:  number of feature_sets per pol per ridz file (i.e. number of timestamps/pol/file)
+        keep_data:  if False (default) it will delete the processed files, otherwise it will keep
+        show_progress:  if True it will display some progress cues, default is False
+        """
+        import glob
+        import datetime
+        import json
+        self.show_progress = show_progress
+        if ident is None:
+            raise ValueError('Need to provide identifier for poco files.')
+        files = glob.glob('{}/{}*.npz'.format(directory, ident))
+        if not len(files):
+            raise ValueError('{} identifier yielded no files.'.format(ident))
+        files.sort()
+        poco_meta = json.load(open('{}/{}.json'.format(directory, ident), 'r'))
+        cadence = len(poco_meta['antennas']) * len(poco_meta['pols'])
+
+        ant = {}
+        data = np.load(files[0])
+        ant['freqs'] = data['frequencies']
+        ant['source'] = data['source']
+        num_antennas_in_npz = max(data['ant1_array']) + 1
+        if num_antennas_in_npz != len(poco_meta['antennas']):
+            raise ValueError("npz and json antenna count doesn't match.")
+        print("Source {} with {} freq".format(str(ant['source']), len(ant['freqs'])))
+        for i, a in enumerate(poco_meta['antennas']):
+            ant[a] = {}
+            for j, p in enumerate(poco_meta['pols']):
+                ant[a][p] = {'header': {}, 'times': [], 'average': [], 'maxhold': []}
+
+        for fp in files:
+            data = np.load(fp)
+            for i, a in enumerate(poco_meta['antennas']):
+                for j, p in enumerate(poco_meta['pols']):
+                    n = 0
+                    for k, t in enumerate(data['times']):
+                        if (k % cadence) == i * j:
+                            ant[a][p]['times'].append(datetime.datetime.utcfromtimestamp(t))
+                            ave = list(data['average'][n, :, i * j])
+                            mh = list(data['max_hold'][n, :, i * j])
+                            ant[a][p]['average'].append(ave)
+                            ant[a][p]['maxhold'].append(mh)
+                            n += 1
+
+        # for i, a in enumerate(poco_meta['antennas']):
+        #     ant[a] = {}
+        #     for j, p in enumerate(poco_meta['pols']):
+        #         ant[a][p] = {'header': {}, 'times': [], 'average': [], 'maxhold': []}
+        #         for fp in files:
+        #             data = np.load(fp)
+        #             n = 0
+        #             for k, t in enumerate(data['times']):
+        #                 if (k % cadence) == i * j:
+        #                     ant[a][p]['times'].append(datetime.datetime.utcfromtimestamp(t))
+        #                     ave = list(data['average'][n, :, i * j])
+        #                     mh = list(data['max_hold'][n, :, i * j])
+        #                     ant[a][p]['average'].append(ave)
+        #                     ant[a][p]['maxhold'].append(mh)
+        #                     n += 1
+
+        return ant
+
     def process_files(self, directory='.', ident='all', data=[0, -1], peak_on=None,
                       data_only=False, sets_per_pol=10000, keep_data=False, show_progress=False):
         """
@@ -404,6 +478,7 @@ class SpectrumPeak(rids.Rids):
         data_only:  flag if only saving data and not peaks
         sets_per_pol:  number of feature_sets per pol per ridz file (i.e. number of timestamps/pol/file)
         keep_data:  if False (default) it will delete the processed files, otherwise it will keep
+        show_progress:  if True it will display some progress cues, default is False
         """
         self.show_progress = show_progress
         # Get overall meta-data for filename
@@ -425,10 +500,6 @@ class SpectrumPeak(rids.Rids):
             if 'rid' in af.split('.')[-1] or af[0] == '.':
                 continue
             fnd = _peel_filename(af, self.feature_components)
-            print(len(fnd))
-            print(fnd)
-            print(self.all_lowercase_polarization_names)
-            print(self.feature_components)
             if not len(fnd) or\
                     fnd['polarization'].lower() not in self.all_lowercase_polarization_names or\
                     fnd['feature_component'] not in self.feature_components:
@@ -439,7 +510,6 @@ class SpectrumPeak(rids.Rids):
                     use_it = True
             elif isinstance(ident, list) and fnd['ident'] in ident:
                 use_it = True
-            print(af, use_it)
             if use_it:
                 idkey = fnd['ident']
                 pol = fnd['polarization']
