@@ -45,6 +45,7 @@ class SPHandling:
                 self.specific_keys = True
             sorted_ftr_keys = sorted(keys)
         self.feature_keys = []
+        self.polarization = '{}'.format(pol)
         pol = pol.upper()
         for fs in sorted_ftr_keys:
             if pol == self.rid.feature_sets[fs].polarization.upper() and spectrum_peak.is_spectrum(fs):
@@ -239,6 +240,7 @@ class SPHandling:
             plt.figure(fc)
             if title is None:
                 title = '{} after {}'.format(ts_unit, self.time_space[fc][0])
+            title += ': {} pol'.format(self.polarization)
             plt.title(title)
             plt.imshow(self.wf[fc], aspect='auto', extent=lims)
             plt.xlabel('Freq [{}]'.format(self.rid.freq_unit))
@@ -250,8 +252,10 @@ class SPHandling:
         for fc in self.feature_components:
             if not all_same_plot:
                 plt.figure(fc)
-            if title is not None:
-                plt.title(title)
+            if title is None:
+                title = 'Raw 2D {}'.format(fc)
+            title += ': {} pol'.format(self.polarization)
+            plt.title(title)
             ts_unit = sp_utils.get_duration_in_std_units(self.t_elapsed[fc][-1])[1]
             if plot_type == 'stream':
                 for i, f in enumerate(self.freq_space):
@@ -279,8 +283,10 @@ class SPHandling:
 
     def raw_totalpower_plot(self, legend=False, title=None):
         plt.figure('Total Power')
-        if title is not None:
-            plt.title(title)
+        if title is None:
+            title = 'Total power'
+        title += ': {} pol'.format(title)
+        plt.title(title)
         ts_unit = sp_utils.get_duration_in_std_units(self.t_elapsed[fc][-1])[1]
         for fc in self.feature_components:
             plt.plot(self.used_keys[fc], self.total_power[fc])
