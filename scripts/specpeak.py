@@ -13,7 +13,8 @@ import os.path
 from rids import features
 
 ap = argparse.ArgumentParser()
-ap.add_argument('rid_filename', help="rids meta-data filename or filename to be viewed (note:  type fnhelp to see format of spectrum filenames)", default=None)
+ap.add_argument('rid_filename', help="rids meta-data filename or filename to be viewed"
+                "(note:  type 'fnhelp' to see format of spectrum filenames)", default=None)
 ap.add_argument('--directory', help="directory for process files and where parameter/rids file lives", default='.')
 
 # parameters used only in script
@@ -24,11 +25,12 @@ ap.add_argument('--archive_data', help="Flag to archive all data (shortcut for d
 ap.add_argument('--data_only_override', help="flag to force data_only without saving all", action='store_true')
 
 # parameters used for both generate and view
-ap.add_argument('-r', '--rawdata', help="csv indices for raw data to keep, or +step ('n' to stop if view)", default='0,-1')
+ap.add_argument('-r', '--rawdata', help="csv indices for raw data to keep, or +step ('n' if skip in view mode)", default='0,-1')
 ap.add_argument('-c', '--comment', help="append a comment or includes comments in keys printout if set", nargs='?', const='view', default=None)
 
 # parameters just used for generate
 ap.add_argument('--id', help="can be a specific id name or 'all'", default='all')
+ap.add_argument('--ptype', help="data file type (if known):  'spfile'/'poco' (None)", default=None)
 ap.add_argument('--keep_data', help="keep data after processing", action='store_true')
 ap.add_argument('-#', '--sets_per_pol', help="number of sets per pol per file", default=10000)
 ap.add_argument('--share_freq', help="invoke if you know all spectra have same freq axis", action="store_true")
@@ -53,7 +55,7 @@ if args.archive_data:
     args.rawdata = '+1'
 if args.data_only and args.rawdata != '+1' and not args.data_only_override:
     print("Warning:  This will delete the data but not save all of the raw or processed data.")
-    raise ValueError("If this is desired then rerun as same adding flag --data_only_override")
+    raise ValueError("If this is desired then rerun as same but adding flag '--data_only_override'")
 
 args.sets_per_pol = int(args.sets_per_pol)
 if args.view:
@@ -100,8 +102,9 @@ else:
         r.read_cal(args.ecal, 'E')
     if args.ncal is not None:
         r.read_cal(args.ncal, 'N')
-    r.process_files(directory=args.directory,
-                    ident=args.id,
+    r.process_files(ident=args.id,
+                    ptype=args.ptype,
+                    directory=args.directory,
                     data=args.rawdata,
                     peak_on=args.peak_on,
                     data_only=args.data_only,

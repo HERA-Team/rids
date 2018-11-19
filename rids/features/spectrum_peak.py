@@ -311,7 +311,7 @@ class SpectrumPeak(rids.Rids):
     def apply_cal(self):
         print("NOT IMPLEMENTED YET: Apply the calibration, if available.")
 
-    def ridz_out_filename(self, idkey):
+    def ridz_out_filename(self, idkey, directory='./'):
         # Get overall meta-data for filename
         th_for_fn = ''
         if self.threshold is not None:
@@ -326,20 +326,51 @@ class SpectrumPeak(rids.Rids):
             th_for_fn = ''
         fn = "{}_{}.{}.n{}.{}{}.ridz".format(idkey, self.feature_module_name, self.timestamp_first,
                                              self.nsets, pk_for_fn, th_for_fn)
+        fn = os.path.join(directory, fn)
         return fn
+
+    def process_files(self, ident, ptype=None, directory='.', data=[0, -1], peak_on=None,
+                      data_only=False, sets_per_pol=10000, keep_data=False, show_progress=False):
+        """
+        Sets up for processing spfiles and or pocofiles.
+
+        Parameters:
+        ------------
+        ident:  identifier for poco files to process
+        ptype:  spfile or pocofile if known
+        directory:  directory where files reside and ridz files get written
+        data:  indices of events to be saved as data spectra
+        peak_on:  feature_component on which to find peaks, default order if None
+        data_only:  flag if only saving data and not peaks
+        sets_per_pol:  number of feature_sets per pol per ridz file (i.e. number of timestamps/pol/file)
+        keep_data:  if False (default) it will delete the processed files, otherwise it will keep
+        show_progress:  if True it will display some progress cues, default is False
+        """
+        print("This pytpe 'all' approach won't work unless I read the ridm file here...")
+        if ptype is None:
+            print("NEED TO FIND OUT IF POCO OR SPECTRUM FILES")
+            print("if ident =='all' and both in there set ptype to 'all'")
+            print("can also set ident to appropriate list of idents...(?)")
+            raise ValueError('But for now just fail.')
+        if ptype.lower() in ('all', 'spfile'):
+            spfile_proc(ident, directory='.', data=[0, -1], peak_on=None,
+                        data_only=False, sets_per_pol=10000, keep_data=False, show_progress=False)
+        if ptype.lower() in ('all', 'poco'):
+            poco_proc(ident, directory='.', data=[0, -1], peak_on=None,
+                      data_only=False, sets_per_pol=10000, keep_data=False, show_progress=False)
 
     # ##############################################################################################
     # ################################   POCO processing section   #################################
     # ##############################################################################################
-    def process_poco(self, directory='.', ident=None, data=[0, -1], peak_on=None,
-                     data_only=False, sets_per_pol=10000, keep_data=False, show_progress=False):
+    def poco_proc(self, ident, directory='.', data=[0, -1], peak_on=None,
+                  data_only=False, sets_per_pol=10000, keep_data=False, show_progress=False):
         """
         This processes the poco npz files.
 
         Parameters:
         ------------
-        directory:  directory where files reside and ridz files get written
         ident:  identifier for poco files to process
+        directory:  directory where files reside and ridz files get written
         data:  indices of events to be saved as data spectra
         peak_on:  feature_component on which to find peaks, default order if None
         data_only:  flag if only saving data and not peaks
@@ -350,26 +381,23 @@ class SpectrumPeak(rids.Rids):
         import glob
         import datetime
         self.show_progress = show_progress
-        if ident is None:
-            raise ValueError('Need to provide identifier for poco files.')
         self.time_format = "%Y%m%d-%H%M%S"
         files = glob.glob('{}/{}*.npz'.format(directory, ident))
         if not len(files):
             raise ValueError('{} identifier yielded no files.'.format(ident))
         files.sort()
-        print("SHORTENING FILES")
         self.reader('{}/{}.ridm'.format(directory, ident))
         antennas = self.antenna.split(',')
         poco_pols = ['E', 'N']
         cadence = len(antennas) * len(poco_pols)
 
         ant = {}
-        data = np.load(files[0])
-        self.freq = list(data['frequencies'])
+        data_file = np.load(files[0])
+        self.freq = list(data_file['frequencies'])
         self.fmin = self.freq[0]
         self.fmax = self.freq[-1]
-        self.receiver = str(data['source'])
-        num_antennas_in_npz = max(data['ant1_array']) + 1
+        self.receiver = str(data_file['source'])
+        num_antennas_in_npz = max(data_file['ant1_array']) + 1
         if num_antennas_in_npz != len(antennas):
             raise ValueError("npz and ridm antenna count doesn't match.")
         print("Receiver {} with {} freq in {}".format(self.receiver, len(self.freq), self.freq_unit))
@@ -384,22 +412,27 @@ class SpectrumPeak(rids.Rids):
             print("Reading in npz files.")
         for fp in files:
             files_this_pass.add(fp)
-            data = np.load(fp)
-            if str(data['source']) != self.receiver:
-                raise ValueError("{} does not match {}.".format(str(data['source']), self.receiver))
+            data_file = np.load(fp)
+            if str(data_file['source']) != self.receiver:
+                raise ValueError("{} does not match {}.".format(str(data_file['source']), self.receiver))
             n = -1
-            for k, t in enumerate(data['times']):
+            for k, t in enumerate(data_file['times']):
                 ap = k % cadence
                 if not ap:
                     n += 1
                 a, p = amap[ap]
                 ant[a][p]['times'].append(datetime.datetime.utcfromtimestamp(t))
-                ant[a][p]['average'].append(list(data['average'][n, :, ap]))
-                ant[a][p]['maxhold'].append(list(data['max_hold'][n, :, ap]))
+                ant[a][p]['val'].append(list(data_file['average'][n, :, ap]))
+                ant[a][p]['maxhold'].append(list(data_file['max_hold'][n, :, ap]))
 
-        print("Start by using all (ignoring 'sets_per_pol')")
         if self.show_progress:
             print("Processing npz into ridz.")
+        if self.peaked_on is None:
+            self.peaked_on = 'maxhold'
+        if peak_on is not None and peak_on in self.feature_components:
+            if self.peaked_on != peak_on:
+                self.comment += "\nPeaked on user-supplied {} rather than {}.".format(peak_on, self.peaked_on)
+            self.peaked_on = peak_on
         for a in antennas:  # Now write the data to ridz files...
             self.antenna = a
             self.feature_sets = {}  # Reset the features sets for new files.
@@ -407,29 +440,52 @@ class SpectrumPeak(rids.Rids):
             self.timestamp_first = datetime.datetime.strftime(ant[a]['E']['times'][0], self.time_format)
             self.timestamp_last = datetime.datetime.strftime(ant[a]['N']['times'][-1], self.time_format)
             for p in poco_pols:
-                # Do it first saving only data (first part of get_feature_set_fromFiles above)
-                for i, t in enumerate(ant[a][p]['times']):
-                    timestamp = datetime.datetime.strftime(t, self.time_format)
-                    feature_tag = 'data:{}:{}'.format(timestamp, p)
-                    self.feature_sets[feature_tag] = Spectral(polarization=p)
-                    self.feature_sets[feature_tag].freq = '@'
-                    self.feature_sets[feature_tag].val = copy.copy(ant[a][p]['average'][i])
-                    self.feature_sets[feature_tag].maxhold = copy.copy(ant[a][p]['maxhold'][i])
-                    self.nsets += 1
-            fn = self.ridz_out_filename(a)
-            self.writer(os.path.join(directory, self.ridz_out_filename(a)))
-        print('Would do peaked stuff here.')
+                if len(ant[a][p]['times']) > sets_per_pol:
+                    print("WARNING:  POCO_PROC currently does not do sets_per_pol limiting")
+                if isinstance(data, list):
+                    for i in data:
+                        if i == len(ant[a][p]['times']):
+                            break
+                        timestamp = datetime.datetime.strftime(ant[a][p]['times'][i], self.time_format)
+                        feature_tag = 'data:{}:{}'.format(timestamp, p)
+                        self.feature_sets[feature_tag] = Spectral(polarization=p)
+                        self.feature_sets[feature_tag].freq = '@'
+                        self.feature_sets[feature_tag].val = copy.copy(ant[a][p]['val'][i])
+                        self.feature_sets[feature_tag].maxhold = copy.copy(ant[a][p]['maxhold'][i])
+                        self.nsets += 1
+                if not data_only:
+                    for p in poco_pols:
+                        if len(ant[a][p]['times']) > sets_per_pol:
+                            print("WARNING:  POCO_PROC currently does not do sets_per_pol limiting")
+                        for i, t in enumerate(ant[a][p]['times']):
+                            timestamp = datetime.datetime.strftime(t, self.time_format)
+                            feature_tag = '{}:{}'.format(timestamp, p)
+                            self.feature_sets[feature_tag] = Spectral(polarization=p)
+                            find_peaks = Spectral()
+                            find_peaks.freq = self.freq
+                            find_peaks.val = ant[a][p][self.peaked_on][i]
+                            self.peak_det(find_peaks, delta=self.delta)
+                            self.find_bw()
+                            self.feature_sets[feature_tag].freq = list(np.array(self.hipk_freq)[self.hipk])
+                            self.feature_sets[feature_tag].val = list(np.array(ant[a][p]['val'][self.hipk]))
+                            self.feature_sets[feature_tag].maxhold = list(np.array(ant[a][p]['maxhold'][self.hipk]))
+                            self.feature_sets[feature_tag].bw = self.hipk_bw
+            fn = self.ridz_out_filename(a, directory)
+            self.writer(fn)
+
+            if not keep_data:
+                print("DELETING DATA NOT IMPLEMENTED YET.")
 
     # ##############################################################################################
     # ############################   Spectrum file processing section   ############################
     # ##############################################################################################
-    def process_files(self, directory='.', ident='all', data=[0, -1], peak_on=None,
-                      data_only=False, sets_per_pol=10000, keep_data=False, show_progress=False):
+    def spfile_proc(self, ident, directory='.', data=[0, -1], peak_on=None, data_only=False,
+                    sets_per_pol=10000, keep_data=False, show_progress=False):
         """
         This is the standard method to process spectrum files in a directory to
         produce ridz files.  The module has an "outer loop" that is meant to handle
         ongoing file-writing along with file reading.  It will quit when it has
-        run out of appropriate files
+        run out of appropriate files.
 
         Format of the spectrum filename (_peel_filename below):
         identifier.{time-stamp}.feature_component.polarization
@@ -450,9 +506,11 @@ class SpectrumPeak(rids.Rids):
         # Get file_idp FileSet of files to do
         file_idp = {}  # keyed set of classes for file-sets
         for af in sorted(os.listdir(directory)):
-            if 'rid' in af.split('.')[-1] or af[0] == '.':
+            if af[0] == '.':
                 continue
             fnd = _peel_filename(af, self.feature_components)
+            if not fnd['spfile']:
+                continue
             if not len(fnd) or\
                     fnd['polarization'].lower() not in self.all_lowercase_polarization_names or\
                     fnd['feature_component'] not in self.feature_components:
@@ -499,21 +557,22 @@ class SpectrumPeak(rids.Rids):
                         chunk_ts_list = []
                     # This is the start of one feature_set
                     # ... get data spectrum files
-                    for j in data:
-                        try:
-                            ts = chunk_ts_list[j]
-                        except IndexError:
-                            break
-                        fnargs = {}
-                        for feco in file_idp[idkey].included_feature_components:
+                    if isinstance(data, list):
+                        for j in data:
                             try:
-                                fnargs[feco] = os.path.join(directory, getattr(file_idp[idkey], feco)[pol][ts])
-                                files_this_pass.add(fnargs[feco])
-                            except KeyError:
-                                continue
-                        if len(fnargs):
-                            feature_tag = 'data:{}:'.format(ts)
-                            self.get_feature_set_from_files(feature_tag, pol, **fnargs)
+                                ts = chunk_ts_list[j]
+                            except IndexError:
+                                break
+                            fnargs = {}
+                            for feco in file_idp[idkey].included_feature_components:
+                                try:
+                                    fnargs[feco] = os.path.join(directory, getattr(file_idp[idkey], feco)[pol][ts])
+                                    files_this_pass.add(fnargs[feco])
+                                except KeyError:
+                                    continue
+                            if len(fnargs):
+                                feature_tag = 'data:{}:'.format(ts)
+                                self.get_feature_set_from_files(feature_tag, pol, **fnargs)
                     if not data_only:
                         # ... get feature_sets
                         for ts in chunk_ts_list:
@@ -662,10 +721,19 @@ def _peel_filename(v, fclist=None):
     if v is None:
         return {}
     s = v.split('/')[-1].split('.')
-    if len(s) < 4:
-        return {}
-    fnd = {'filename': v, 'ident': s[0]}
+    fnd = {'filename': '.'.join(s), 'tag': s[-1].lower(), 'spfile': False, 'ridfile': False, 'npzfile': False}
+    if len(s) < 2:
+        return fnd
+    fnd['ident'] = s[0]
+    if 'rid' in fnd['tag']:
+        fnd['ridfile'] = True
+    if 'npz' in fnd['tag']:
+        fnd['npzfile'] = True
+    if len(s) < 3:
+        return fnd
     fnd['timestamp'] = '.'.join(s[1:-2])
+    if len(s) < 4:
+        return fnd
     fnd['feature_component'] = s[-2].lower()
     fnd['polarization'] = s[-1].upper()
     if fclist is None:
@@ -674,8 +742,9 @@ def _peel_filename(v, fclist=None):
     for fc in fclist:
         if fnd['feature_component'] in fc:
             fnd['feature_component'] = fc
+            fnd['spfile'] = True
             return fnd
-    return {}
+    return fnd
 
 
 def _get_timestr_from_ftr_key(fkey):
