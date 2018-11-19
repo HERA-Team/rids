@@ -13,6 +13,7 @@ from rids import features
 ap = argparse.ArgumentParser()
 
 ap.add_argument('file', help="file(s) to use.  If non-RID file, will read in filenames contained in that file.", default=None)
+ap.add_argument('-p', '--pol', help="polarization to use", default=None)
 ap.add_argument('-w', '--wf', help="plot raw_data feature components as waterfall in that file ('val', 'maxhold', or 'minhold')", default=None)
 ap.add_argument('--stack', help="plot raw_data feature components as stack in that file ( '' or csv list)", default=None)
 ap.add_argument('--stream', help="plot raw_data as time streams in that file ( '' or csv list)", default=None)
@@ -33,6 +34,9 @@ ap.add_argument('--hide-gaps', dest='wf_gaps', help="flag to ignore time gaps in
 args = ap.parse_args()
 
 args.file = args.file.split(',')
+
+if args.pol is None:
+    raise ValueError("polarization must be set.")
 
 if args.f_range is not None:
     args.f_range = [float(x) for x in args.f_range.split(',')]
@@ -78,7 +82,7 @@ r = features.spectrum_peak.SpectrumPeak()
 r.reader(args.file)
 # Set up data parameters for plot
 s = features.sp_handling_raw.SPHandling(r)
-s.set_feature_keys(keys=args.keys)
+s.set_feature_keys(pol=args.pol, keys=args.keys)
 s.set_freq(f_range=args.f_range)
 s.set_time_range(t_range=t_range, flip=args.flip_range)
 # Plot it

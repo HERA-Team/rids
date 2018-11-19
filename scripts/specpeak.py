@@ -73,39 +73,38 @@ if args.threshold_view is not None:
     args.threshold_view = float(args.threshold_view)
 full_filename = os.path.join(args.directory, args.rid_filename)
 
-if __name__ == '__main__':
-    r = features.spectrum_peak.SpectrumPeak(share_freq=args.share_freq, view_ongoing=args.view_peaks_ongoing)
-    r.reader(full_filename, reset=False)
-    if args.info:
-        r.info()
-    elif args.view:
-        r.info()
-        r.viewer(threshold=args.threshold_view, show_components=args.show_fc, show_data=args.rawdata)
-    elif args.keys:
-        print("\nFeature set keys:")
-        for k in r.feature_sets.keys():
-            if args.comment is None:
-                s = '['
-                for x in dir(r.feature_sets[k]):
-                    if x[0] != '_':
-                        s += '{}, '.format(x)
-                s = s.strip().strip(',') + ']'
-                print("\t{}  {}".format(k, s))
-            else:
-                print('---{}---'.format(k))
-                if len(r.feature_sets[k].comment):
-                    print('{}'.format(r.feature_sets[k].comment))
-    else:
-        r.append_comment(args.comment)
-        if args.ecal is not None:
-            r.read_cal(args.ecal, 'E')
-        if args.ncal is not None:
-            r.read_cal(args.ncal, 'N')
-        r.process_files(directory=args.directory,
-                        ident=args.id,
-                        data=args.rawdata,
-                        peak_on=args.peak_on,
-                        data_only=args.data_only,
-                        sets_per_pol=args.sets_per_pol,
-                        keep_data=args.keep_data,
-                        show_progress=args.show_progress)
+r = features.spectrum_peak.SpectrumPeak(share_freq=args.share_freq, view_ongoing=args.view_peaks_ongoing)
+r.reader(full_filename, reset=False)
+if args.info:
+    r.info()
+elif args.view:
+    r.info()
+    r.viewer(threshold=args.threshold_view, show_components=args.show_fc, show_data=args.rawdata)
+elif args.keys:
+    print("\nFeature set keys:")
+    for k in r.feature_sets.keys():
+        if args.comment is None:
+            s = '['
+            for x in dir(r.feature_sets[k]):
+                if x[0] != '_':
+                    s += '{}, '.format(x)
+            s = s.strip().strip(',') + ']'
+            print("\t{}  {}".format(k, s))
+        else:
+            print('---{}---'.format(k))
+            if len(r.feature_sets[k].comment):
+                print('{}'.format(r.feature_sets[k].comment))
+else:
+    r.append_comment(args.comment)
+    if args.ecal is not None:
+        r.read_cal(args.ecal, 'E')
+    if args.ncal is not None:
+        r.read_cal(args.ncal, 'N')
+    r.process_files(directory=args.directory,
+                    ident=args.id,
+                    data=args.rawdata,
+                    peak_on=args.peak_on,
+                    data_only=args.data_only,
+                    sets_per_pol=args.sets_per_pol,
+                    keep_data=args.keep_data,
+                    show_progress=args.show_progress)

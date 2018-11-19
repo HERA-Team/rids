@@ -25,7 +25,7 @@ class SPHandling:
         self.sp = spectrum_peak.SpectrumPeak()
         self.rid = rid_class
 
-    def set_feature_keys(self, keys=None):
+    def set_feature_keys(self, pol, keys=None):
         """
         Finds the keys corresponding to spectra, or checks/sorts a given list.
         Sets self.feature_keys, the sorted list of keys of _spectrum_ data.
@@ -45,8 +45,9 @@ class SPHandling:
                 self.specific_keys = True
             sorted_ftr_keys = sorted(keys)
         self.feature_keys = []
+        pol = pol.upper()
         for fs in sorted_ftr_keys:
-            if spectrum_peak.is_spectrum(fs):
+            if pol == self.rid.feature_sets[fs].polarization.upper() and spectrum_peak.is_spectrum(fs):
                 self.feature_keys.append(fs)
 
     def set_freq(self, f_range=None):
@@ -155,6 +156,9 @@ class SPHandling:
                 self.used_keys[fc].append(fs)
                 self.time_space[fc].append(ts)
                 if len(self.time_space[fc]) > 1:
+                    a = self.time_space[fc][-1]
+                    b = self.time_space[fc][-2]
+                    dab = (a - b).total_seconds()
                     self.delta_t[fc].append((self.time_space[fc][-1] - self.time_space[fc][-2]).total_seconds())
                     self.t_elapsed[fc].append((self.time_space[fc][-1] - self.time_space[fc][0]).total_seconds())
             self.delta_t[fc] = np.array(self.delta_t[fc])

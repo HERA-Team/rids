@@ -45,7 +45,7 @@ class Rids(object):
             feature_sets:  features etc defined in the feature module
     """
     # Along with the feature attributes, these are the allowed attributes for json r/w
-    direct_attributes = ['rid_file', 'ident', 'instrument', 'receiver', 'comment',
+    direct_attributes = ['rid_file', 'ident', 'antenna', 'instrument', 'receiver', 'comment',
                          'timestamp_first', 'timestamp_last', 'time_format', 'nsets']
     unit_attributes = ['channel_width', 'time_constant']
 
