@@ -5,6 +5,13 @@ import matplotlib.pyplot as plt
 from scipy import signal
 import os.path
 
+def peak_finder(self, spec, cwt_range=[1, 3], rc_range=[4, 4]):
+    """
+    Deprecated peak_finder
+    """
+    self.hipk_freq = spec.freq
+    self.hipk_val = spec.val
+    self.hipk = peaks.fp(spec.val, self.threshold, cwt_range, rc_range)
 
 def procfiles(files_to_proc, threshold=-15.0, cwt_range=[1, 7], rc_range=[4, 4], f_range=[20.0, 300.0],
               title_prefix='', dir=None, saveit=False, yrange='minmax'):
