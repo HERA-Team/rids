@@ -21,7 +21,8 @@ ap.add_argument('--directory', help="directory for process files and where param
 ap.add_argument('-i', '--info', help="show the info for provided filename", action="store_true")
 ap.add_argument('-v', '--view', help="show plot for provided filename", action="store_true")
 ap.add_argument('-k', '--keys', help="Show the feature_set keys", action='store_true')
-ap.add_argument('--archive_data', help="Flag to archive all data (shortcut for data_only=True and rawdata='+1').", action='store_true')
+ap.add_argument('--archive-data', dest='archive_data', help="Flag to archive all data"
+                "(shortcut for data_only=True and rawdata='+1').", action='store_true')
 ap.add_argument('--data_only_override', help="flag to force data_only without saving all", action='store_true')
 
 # parameters used for both generate and view
@@ -30,14 +31,14 @@ ap.add_argument('-c', '--comment', help="append a comment or includes comments i
 
 # parameters just used for generate
 ap.add_argument('--id', help="can be a specific id name or 'all'", default='all')
-ap.add_argument('--ptype', help="data file type (if known):  'spfile'/'poco' (None)", default=None)
-ap.add_argument('--keep_data', help="keep data after processing", action='store_true')
-ap.add_argument('-#', '--sets_per_pol', help="number of sets per pol per file", default=10000)
-ap.add_argument('--share_freq', help="invoke if you know all spectra have same freq axis", action="store_true")
-ap.add_argument('--peak_on', help="Peak on event component (if other than max->min->val)", default=None)
+ap.add_argument('--ptype', help="data processing file type (if known):  'spfile'/'poco' (None)", default=None)
+ap.add_argument('--keep-data', dest='keep_data', help="keep data after processing", action='store_true')
+ap.add_argument('-#', '--sets-per-pol', dest='sets_per_pol', help="number of sets per pol per file", default=10000)
+ap.add_argument('--share-freq', dest='share_freq', help="invoke if you know all spectra have same freq axis", action="store_true")
+ap.add_argument('--peak-on', dest='peak_on', help="Peak on event component (if other than max->min->val)", default=None)
 ap.add_argument('--view_peaks_ongoing', help="view all peaks in process (diagnostic only!)", action="store_true")
-ap.add_argument('--show_progress', help="print file name as processed", action='store_true')
-ap.add_argument('--data_only', help="flag to only store data and not peaks", action='store_true')
+ap.add_argument('--show-progress', dest='show_progress', help="print file name as processed", action='store_true')
+ap.add_argument('--data-only', dest='data_only', help="flag to only store data and not peaks", action='store_true')
 ap.add_argument('--ecal', help="E-pol cal filename", default=None)
 ap.add_argument('--ncal', help="N-pol cal filename", default=None)
 
@@ -53,7 +54,7 @@ if args.rid_filename == 'fnhelp':
 if args.archive_data:
     args.data_only = True
     args.rawdata = '+1'
-if args.data_only and args.rawdata != '+1' and not args.data_only_override:
+if not args.keep_data and args.data_only and args.rawdata != '+1' and not args.data_only_override:
     print("Warning:  This will delete the data but not save all of the raw or processed data.")
     raise ValueError("If this is desired then rerun as same but adding flag '--data_only_override'")
 
@@ -65,7 +66,7 @@ if args.view:
         args.rawdata = True
 elif args.rawdata[0] == '+':
     step = int(args.rawdata[1:])
-    args.rawdata = range(0, args.sets_per_pol, step)
+    args.rawdata = list(range(0, args.sets_per_pol, step))
 else:
     a = args.rawdata.split(',')
     args.rawdata = [int(x) for x in a]

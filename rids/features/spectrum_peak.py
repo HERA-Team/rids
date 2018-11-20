@@ -420,15 +420,14 @@ class SpectrumPeak(rids.Rids):
         plens = []
         for a in antennas:
             for p in poco_pols:
-                plens.append(len(ant[a][p]))
+                plens.append(len(ant[a][p]['times']))
         mp = max(plens)
         chunks = list(range(0, mp, sets_per_pol))
-        if float(mp - chunks[-1]) / mp > 0.95:
+        if len(chunks) > 1 and float(mp - chunks[-1]) / mp < 0.15:
             chunks[-1] = mp
         else:
             chunks.append(mp)
 
-        print("MAKE SURE DATA[-1] IS CORRECT.")
         if self.show_progress:
             print("Processing npz into ridz.")
         if self.peaked_on is None:
@@ -441,18 +440,21 @@ class SpectrumPeak(rids.Rids):
             L0, L1 = chunks[ctr], chunks[ctr + 1]
             for a in antennas:  # Now write the data to ridz files...
                 if self.show_progress:
-                    print("\tWriting for antenna {}:  {} of {}".format(a, ctr, chunks))
+                    print("\tWriting for antenna {}:  {} of {}".format(a, ctr + 1, len(chunks) - 1))
                 self.antenna = a
                 self.feature_sets = {}  # Reset the features sets for new files.
                 self.nsets = 0
                 self.timestamp_first = datetime.datetime.strftime(min(ant[a]['E']['times'][L0], ant[a]['N']['times'][L0]), self.time_format)
-                self.timestamp_last = datetime.datetime.strftime(max(ant[a]['E']['times'][L1 - 1], ant[a]['N']['times'][L - 1]), self.time_format)
+                self.timestamp_last = datetime.datetime.strftime(max(ant[a]['E']['times'][L1 - 1], ant[a]['N']['times'][L1 - 1]), self.time_format)
                 for p in poco_pols:
                     if isinstance(data, list):
                         for i in data:
-                            if i == len(ant[a][p]['times'][L[0]:L[1]]):
+                            if i == len(ant[a][p]['times'][L0:L1]):
                                 break
-                            IL = L0 + i
+                            if i < 0:
+                                IL = L1 + i
+                            else:
+                                IL = L0 + i
                             timestamp = datetime.datetime.strftime(ant[a][p]['times'][IL], self.time_format)
                             feature_tag = 'data:{}:{}'.format(timestamp, p)
                             self.feature_sets[feature_tag] = Spectral(polarization=p)
@@ -475,11 +477,12 @@ class SpectrumPeak(rids.Rids):
                             self.feature_sets[feature_tag].maxhold = list(np.array(ant[a][p]['maxhold'][i])[self.hipk])
                             self.feature_sets[feature_tag].bw = self.hipk_bw
                             self.nsets += 1
-            fn = self.ridz_out_filename(a, directory)
-            self.writer(fn)
-
-            if not keep_data:
-                print("DELETING DATA NOT IMPLEMENTED YET.")
+                fn = self.ridz_out_filename(a, directory)
+                self.writer(fn)
+        if not keep_data:
+            # ... delete processed files
+            for x in files_this_pass:
+                os.remove(x)
 
     # ##############################################################################################
     # ############################   Spectrum file processing section   ############################
@@ -591,14 +594,14 @@ class SpectrumPeak(rids.Rids):
                             if len(fnargs):
                                 feature_tag = '{}:'.format(ts)
                                 self.get_feature_set_from_files(feature_tag, pol, peak_on=peak_on, **fnargs)
-                if not keep_data:
-                    # ... delete processed files
-                    for x in files_this_pass:
-                        os.remove(x)
                 # Write the ridz file
                 fn = self.ridz_out_filename(idkey)
                 filename = os.path.join(directory, fn)
                 self.writer(filename)
+                if not keep_data:
+                    # ... delete processed files
+                    for x in files_this_pass:
+                        os.remove(x)
 
     def get_feature_set_from_files(self, feature_tag, polarization, peak_on=None, **fnargs):
         """
