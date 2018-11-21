@@ -52,7 +52,7 @@ include the additional attributes.  Current scripts are:
 * `specpeak.py`
 generates spectrum_peak ridz files from spectrum data files.  Includes a few general tools to show some info
 
-* `sp_rawview.py`
+* `spraw.py`
 handles "raw data" in spectrum_peak ridz files for display, etc ... Currently only plots waterfall or stack of raw-data
 from named file
 
