@@ -24,6 +24,7 @@ class SPHandling:
     def __init__(self, rid_class):
         self.sp = spectrum_peak.SpectrumPeak()
         self.rid = rid_class
+        self.feature_keys_found = False
 
     def set_feature_keys(self, pol, keys=None):
         """
@@ -50,6 +51,9 @@ class SPHandling:
         for fs in sorted_ftr_keys:
             if pol == self.rid.feature_sets[fs].polarization.upper() and spectrum_peak.is_spectrum(fs):
                 self.feature_keys.append(fs)
+        self.feature_keys_found = bool(len(self.feature_keys))
+        if not self.feature_keys_found:
+            print("No keys found for requested values.")
 
     def set_freq(self, f_range=None):
         """
@@ -65,6 +69,8 @@ class SPHandling:
         ------------
         f_range:  desired frequency range.  If None, uses entire full_freq array
         """
+        if not self.feature_keys_found:
+            return None
         self.full_freq = self.rid.feature_sets[self.feature_keys[0]].freq  # chose first one
         if self.full_freq == '@':  # share_freq was set
             self.full_freq = self.rid.freq
@@ -101,6 +107,8 @@ class SPHandling:
         t_range:  time range, as datetime.datetime list-pair
         flip:  boolean to flip sense of time filter (don't plot within those)
         """
+        if not self.feature_keys_found:
+            return None
         self.flip = flip
         t0 = self.rid.get_datetime_from_timestamp(spectrum_peak._get_timestr_from_ftr_key(self.feature_keys[0]))
         tn = self.rid.get_datetime_from_timestamp(spectrum_peak._get_timestr_from_ftr_key(self.feature_keys[-1]))
@@ -136,6 +144,8 @@ class SPHandling:
             self.delta_t:  timestep in sec
             self.t_elapsed:  elapsed time since beginning of plot in sec
         """
+        if not self.feature_keys_found:
+            return None
         self.feature_components = feature_components
         self.used_keys = {}
         self.time_space = {}
@@ -177,6 +187,8 @@ class SPHandling:
         show_edits:  If True, shows the plot of what it did to make the waterfall columns align.
         total_power_only:  if True, it doesn't make/save the wf plot (if memory an issue)
         """
+        if not self.feature_keys_found:
+            return None
         if total_power_only:
             wf_time_fill = None
         else:
@@ -228,6 +240,8 @@ class SPHandling:
         Plots the full waterfall
         """
         # Get data and parameters
+        if not self.feature_keys_found:
+            return None
 
         for fc in self.feature_components:
             t_lo = 0.0
@@ -249,6 +263,8 @@ class SPHandling:
 
     def raw_2D_plot(self, plot_type, legend=False, all_same_plot=False, title=None):
         # plot data (other)
+        if not self.feature_keys_found:
+            return None
         for fc in self.feature_components:
             if not all_same_plot:
                 plt.figure(fc)
@@ -282,6 +298,8 @@ class SPHandling:
                 plt.legend()
 
     def raw_totalpower_plot(self, legend=False, title=None):
+        if not self.feature_keys_found:
+            return None
         plt.figure('Total Power')
         if title is None:
             title = 'Total power'

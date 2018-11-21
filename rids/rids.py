@@ -198,14 +198,15 @@ class Rids(object):
         for d in self.direct_attributes:
             val = getattr(self, d)
             if len(str(val)) > dirlen:
-                val = str(val)[:dirlen] + ' ......'
+                lenval = '({})'.format(len(val))
+                val = '{} .....   {}'.format(str(val)[:dirlen], lenval)
             print("\t{}:  {}".format(d, val))
         for d in self.unit_attributes:
             print("\t{}:  {} {}".format(d, getattr(self, d), getattr(self, d + '_unit')))
         for d in feature_direct:
             val = getattr(self, d)
             if len(str(val)) > dirlen:
-                val = str(val)[:dirlen] + ' ......'
+                val = '{} .....   ({})'.format(str(val)[:dirlen], len(val))
             print("\tfeatures.{}:  {}".format(d, val))
         for d in feature_unit:
             print("\tfeatures.{}:  {} {}".format(d, getattr(self, d), getattr(self, d + '_unit')))
