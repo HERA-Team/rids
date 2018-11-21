@@ -201,8 +201,12 @@ class SPHandling:
             self.total_power[fc] = []
             fadd = []
             ftrunc = []
-            min_t_step = self.delta_t[fc][1:].min()
-            std_t_step = self.delta_t[fc][1:].std()
+            if len(self.delta_t[fc]) < 2:
+                min_t_step = 0.0
+                std_t_step = 0.0
+            else:
+                min_t_step = self.delta_t[fc][1:].min()
+                std_t_step = self.delta_t[fc][1:].std()
             for i, fs in enumerate(self.used_keys[fc]):
                 x, y = spectrum_peak._spectrum_plotter(self.rid.feature_sets[fs].freq, getattr(self.rid.feature_sets[fs], fc), None)
                 if x is None:
