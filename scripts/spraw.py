@@ -17,7 +17,7 @@ ap.add_argument('-p', '--pol', help="polarization to use", default=None)
 ap.add_argument('-w', '--wf', help="plot raw_data feature components as waterfall in that file ('val', 'maxhold', or 'minhold')", default=None)
 ap.add_argument('--stack', help="plot raw_data feature components as stack in that file ( '' or csv list)", default=None)
 ap.add_argument('--stream', help="plot raw_data as time streams in that file ( '' or csv list)", default=None)
-ap.add_argument('--totalpower', help="plot total power", default=None)
+ap.add_argument('--totalpower', help="plot total power (specify dB/dBv/linear/linearv -- not assumes dB)", default=None)
 ap.add_argument('-f', '--f-range', dest='f_range', help="range in freq for plots (min,max)", default=None)
 ap.add_argument('-l', '--legend', help="include a legend on stack/stream plots", action='store_true')
 ap.add_argument('-k', '--keys', help="plot specific keys - generally use with stack (key1,key2,...)", default=None)
@@ -26,7 +26,12 @@ ap.add_argument('--all-same-plot', dest='all_same_plot', help="put different fea
 ap.add_argument('--wf-fill', dest='wf_time_fill', help="value or scheme to use for missing values if showing wf_gaps", default='default')
 ap.add_argument('--show-edits', dest='show_edits', help="Flag to display info on what was needed to make arrays same length.", action='store_true')
 ap.add_argument('--flip', dest='flip_range', help="Flag to plot converse of t_range", action='store_true')
+ap.add_argument('--csv', help="Save data array to csv file (<fc>_out.csv).", action='store_true')
 # Only used in script
+ap.add_argument('--dB', help="convert to dB (assume values are linear power)", action='store_true')
+ap.add_argument('--linear', help="convert to linear power (assume values are dB)", action='store_true')
+ap.add_argument('--dBv', help="convert to dB (assume values are linear volts)", action='store_true')
+ap.add_argument('--linearv', help="convert to linear voltage (assume values are dB)", action='store_true')
 ap.add_argument('-0', '--start-time', dest='start_time', help="start-time to use:  YY-MM-DD.HH:MM[:SS] - default is data start", default=None)
 ap.add_argument('-1', '--stop-time', dest='stop_time', help="stop-time to use:  YY-MM-DD.HH:MM[:SS] - default is data end", default=None)
 ap.add_argument('--hide-gaps', dest='wf_gaps', help="flag to ignore time gaps in wf plot [the time-scale won't match", action='store_false')
@@ -52,6 +57,19 @@ if args.stop_time is not None:
     args.stop_time = datetime.datetime.strptime(args.stop_time, '%y-%m-%d.%H:%M:%S')
 
 t_range = [args.start_time, args.stop_time]
+
+unit_conversion = 'none'
+if args.dB:
+    unit_conversion = 'dB'
+if args.linear:
+    unit_conversion = 'linear'
+if args.dBv:
+    unit_conversion = 'dBv'
+if args.linearv:
+    unit_conversion = 'linearv'
+
+if args.csv:
+    args.csv = 'out.csv'
 
 if args.keys is not None:
     args.keys = args.keys.split(',')
@@ -91,19 +109,23 @@ s.set_freq(f_range=args.f_range)
 s.set_time_range(t_range=t_range, flip=args.flip_range)
 # Plot it
 if args.wf is not None:
+    args.csv = '{}_{}'.format(args.wf, args.csv)
     s.time_filter(args.wf)
-    s.process(wf_time_fill=args.wf_time_fill, show_edits=args.show_edits)
+    s.process(wf_time_fill=args.wf_time_fill, show_edits=args.show_edits, unit_conversion=unit_conversion, csv=args.csv)
     s.raw_waterfall_plot(title=args.title)
 if args.stack is not None:
+    args.csv = '{}_{}'.format(args.stack, args.csv)
     s.time_filter(args.stack)
-    s.process(show_edits=args.show_edits)
+    s.process(show_edits=args.show_edits, unit_conversion=unit_conversion, csv=args.csv)
     s.raw_2D_plot(plot_type='stack', legend=args.legend, all_same_plot=args.all_same_plot, title=args.title)
 if args.stream is not None:
+    args.csv = '{}_{}'.format(args.stream, args.csv)
     s.time_filter(args.stream)
-    s.process(show_edits=args.show_edits)
+    s.process(show_edits=args.show_edits, unit_conversion=unit_conversion, csv=args.csv)
     s.raw_2D_plot(plot_type='stream', legend=args.legend, all_same_plot=args.all_same_plot, title=args.title)
 if args.totalpower is not None:
+    args.csv = '{}_{}'.format(args.totalpower, args.csv)
     s.time_filter(args.totalpower)
-    s.process(show_edits=args.show_edits, total_power_only=True)
+    s.process(show_edits=args.show_edits, total_power_only=True, unit_conversion=unit_conversion, csv=args.csv)
     s.raw_totalpower_plot(title=args.title)
 plt.show()

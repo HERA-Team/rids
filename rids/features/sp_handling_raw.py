@@ -174,7 +174,7 @@ class SPHandling:
                     self.t_elapsed[fc].append((self.time_space[fc][-1] - self.time_space[fc][0]).total_seconds())
             self.delta_t[fc] = np.array(self.delta_t[fc])
 
-    def process(self, wf_time_fill=None, show_edits=True, total_power_only=False):
+    def process(self, wf_time_fill=None, show_edits=True, total_power_only=False, unit_conversion='none', csv=None):
         """
         Process the rid data to make the plots.
         Sets self.wf:  all of the data in waterfall format
@@ -195,6 +195,10 @@ class SPHandling:
             self.wf = {}
         self.total_power = {}
         lfrq = len(self.full_freq)
+        self.unit_conversion = unit_conversion
+        calval = 10.0
+        if unit_conversion[-1].lower() == 'v':
+            calval = 20.0
         for fc in self.feature_components:
             if not total_power_only:
                 self.wf[fc] = []
@@ -220,7 +224,10 @@ class SPHandling:
                     ftrunc.append(len(x) - lfrq)
                     y = y[:lfrq]
                 xxx = np.array(y)[self.lo_chan:self.hi_chan]
-                tp = 10.0 * np.log10(np.sum(np.power(10.0, np.array(xxx) / 10.0)))
+                if unit_conversion.startswith('dB') or unit_conversion_startswith('no'):
+                    tp = calval * np.log10(np.sum(np.power(10.0, xxx / calval)))
+                elif unit_conversion.startswith('lin'):
+                    tp = np.sum(xxx)
                 self.total_power[fc].append(tp)
                 if i and wf_time_fill is not None:
                     if self.delta_t[fc][i] > min_t_step + std_t_step:
@@ -231,6 +238,16 @@ class SPHandling:
                     self.wf[fc].append(y[self.lo_chan:self.hi_chan])
             if not total_power_only:
                 self.wf[fc] = np.array(self.wf[fc])
+                if unit_conversion.startswith('dB'):
+                    zzz = np.where(self.wf[fc] == 0.0)
+                    if len(zzz):
+                        self.wf[fc][zzz] = np.max(self.wf[fc])
+                        self.wf[fc][zzz] = np.min(self.wf[fc]) / 1000.0
+                    self.wf[fc] = calval * np.log10(self.wf[fc])
+                elif unit_converion.startswith('linear'):
+                    self.wf[fc] = np.power(self.wf[fc] / calval, 10.0)
+                if csv is not None:
+                    np.savetxt(csv, self.wf[fc], delimiter=',')
             if show_edits:
                 plt.figure('max')
                 plt.plot(fadd)
@@ -269,6 +286,10 @@ class SPHandling:
         # plot data (other)
         if not self.feature_keys_found:
             return None
+        if self.unit_conversion.startswith('no'):
+            punit = self.rid.val_unit
+        else:
+            punit = self.unit_conversion
         for fc in self.feature_components:
             if not all_same_plot:
                 plt.figure(fc)
@@ -285,7 +306,7 @@ class SPHandling:
                     plt.plot(self.used_keys[fc], self.wf[fc][:, i], label=freq_label)
                 print("Number of plots: {}".format(len(self.freq_space)))
                 plt.xlabel('{} after {}'.format(ts_unit, self.time_space[fc][0]))
-                plt.ylabel('Power [{}]'.format(self.rid.val_unit))
+                plt.ylabel('Power [{}]'.format(punit))
             elif plot_type == 'stack':
                 for i, ts in enumerate(self.used_keys[fc]):
                     if self.specific_keys:
@@ -297,13 +318,17 @@ class SPHandling:
                     plt.plot(self.freq_space, self.wf[fc][i, :], label=time_label)
                 print("Number of plots: {}".format(len(self.used_keys)))
                 plt.xlabel('Freq [{}]'.format(self.rid.freq_unit))
-                plt.ylabel('Power [{}]'.format(self.rid.val_unit))
+                plt.ylabel('Power [{}]'.format(punit))
             if legend:
                 plt.legend()
 
     def raw_totalpower_plot(self, legend=False, title=None):
         if not self.feature_keys_found:
             return None
+        if self.unit_conversion.startswith('no'):
+            punit = self.rid.val_unit
+        else:
+            punit = self.unit_conversion
         plt.figure('Total Power')
         if title is None:
             title = 'Total power'
@@ -313,4 +338,4 @@ class SPHandling:
         for fc in self.feature_components:
             plt.plot(self.used_keys[fc], self.total_power[fc])
         plt.xlabel('{} after {}'.format(ts_unit, self.time_space[fc][0]))
-        plt.ylabel('Power [{}]'.format(self.rid.val_unit))
+        plt.ylabel('Power [{}]'.format(punit))
