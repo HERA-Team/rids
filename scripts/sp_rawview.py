@@ -27,8 +27,8 @@ ap.add_argument('--wf-fill', dest='wf_time_fill', help="value or scheme to use f
 ap.add_argument('--show-edits', dest='show_edits', help="Flag to display info on what was needed to make arrays same length.", action='store_true')
 ap.add_argument('--flip', dest='flip_range', help="Flag to plot converse of t_range", action='store_true')
 # Only used in script
-ap.add_argument('-0', '--start-time', dest='start_time', help="start-time to use:  YY-MM-DD.HH:MM - default is data start", default=None)
-ap.add_argument('-1', '--stop-time', dest='stop_time', help="stop-time to use:  YY-MM-DD.HH:MM - default is data end", default=None)
+ap.add_argument('-0', '--start-time', dest='start_time', help="start-time to use:  YY-MM-DD.HH:MM[:SS] - default is data start", default=None)
+ap.add_argument('-1', '--stop-time', dest='stop_time', help="stop-time to use:  YY-MM-DD.HH:MM[:SS] - default is data end", default=None)
 ap.add_argument('--hide-gaps', dest='wf_gaps', help="flag to ignore time gaps in wf plot [the time-scale won't match", action='store_false')
 
 args = ap.parse_args()
@@ -42,10 +42,14 @@ if args.f_range is not None:
     args.f_range = [float(x) for x in args.f_range.split(',')]
 
 if args.start_time is not None:
-    args.start_time = datetime.datetime.strptime(args.start_time, '%y-%m-%d.%H:%M')
+    if args.start_time.count(':') == 1:
+        args.start_time += ':00'
+    args.start_time = datetime.datetime.strptime(args.start_time, '%y-%m-%d.%H:%M:%S')
 
 if args.stop_time is not None:
-    args.stop_time = datetime.datetime.strptime(args.stop_time, '%y-%m-%d.%H:%M')
+    if args.stop_time.count(':') == 1:
+        args.stop_time += ':00'
+    args.stop_time = datetime.datetime.strptime(args.stop_time, '%y-%m-%d.%H:%M:%S')
 
 t_range = [args.start_time, args.stop_time]
 
