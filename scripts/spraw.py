@@ -109,22 +109,18 @@ s.set_freq(f_range=args.f_range)
 s.set_time_range(t_range=t_range, flip=args.flip_range)
 # Plot it
 if args.wf is not None:
-    args.csv = '{}_{}'.format(args.wf, args.csv)
     s.time_filter(args.wf)
     s.process(wf_time_fill=args.wf_time_fill, show_edits=args.show_edits, unit_conversion=unit_conversion, csv=args.csv)
     s.raw_waterfall_plot(title=args.title)
 if args.stack is not None:
-    args.csv = '{}_{}'.format(args.stack, args.csv)
     s.time_filter(args.stack)
     s.process(show_edits=args.show_edits, unit_conversion=unit_conversion, csv=args.csv)
     s.raw_2D_plot(plot_type='stack', legend=args.legend, all_same_plot=args.all_same_plot, title=args.title)
 if args.stream is not None:
-    args.csv = '{}_{}'.format(args.stream, args.csv)
     s.time_filter(args.stream)
     s.process(show_edits=args.show_edits, unit_conversion=unit_conversion, csv=args.csv)
     s.raw_2D_plot(plot_type='stream', legend=args.legend, all_same_plot=args.all_same_plot, title=args.title)
 if args.totalpower is not None:
-    args.csv = '{}_{}'.format(args.totalpower, args.csv)
     s.time_filter(args.totalpower)
     s.process(show_edits=args.show_edits, total_power_only=True, unit_conversion=unit_conversion, csv=args.csv)
     s.raw_totalpower_plot(title=args.title)

@@ -314,8 +314,9 @@ class SpectrumPeak(rids.Rids):
         if self.peaked_on is not None:
             pk_for_fn = self.peaked_on[:3]
         else:
-            pk_for_fn = 'None'
-            th_for_fn = ''
+            pk_for_fn, th_for_fn = 'None', ''
+        if self.data_only:
+            pk_for_fn, th_for_fn = 'None', ''
         fn = "{}_{}.{}.n{}.{}{}.ridz".format(idkey, self.feature_module_name, self.timestamp_first,
                                              self.nsets, pk_for_fn, th_for_fn)
         fn = os.path.join(directory, fn)
@@ -344,6 +345,7 @@ class SpectrumPeak(rids.Rids):
             print("if ident =='all' and both in there set ptype to 'all'")
             print("can also set ident to appropriate list of idents...(?)")
             raise ValueError('But for now just fail.')
+        self.data_only = data_only
         if ptype.lower() in ('all', 'spfile'):
             self.spfile_proc(ident=ident, directory=directory, data=data, peak_on=peak_on, data_only=data_only,
                              sets_per_pol=sets_per_pol, keep_data=keep_data, show_progress=show_progress)
@@ -372,6 +374,8 @@ class SpectrumPeak(rids.Rids):
         """
         import glob
         import datetime
+        if show_progress:
+            import tabulate
         self.show_progress = show_progress
         self.time_format = "%Y%m%d-%H%M%S"
         files = glob.glob('{}/{}*.npz'.format(directory, ident))
@@ -397,14 +401,14 @@ class SpectrumPeak(rids.Rids):
         for a in antennas:
             ant[a] = {}
             for p in poco_pols:
-                ant[a][p] = {'header': {}, 'times': [], 'val': [], 'maxhold': []}
+                ant[a][p] = {'header': {}, 'times': [], 'N': 0, 'val': [], 'maxhold': []}
                 amap.append((a, p))
         files_this_pass = set()
         if self.show_progress:
             print("Reading in npz files.")
-        for fp in files:
-            files_this_pass.add(fp)
-            data_file = np.load(fp)
+        for fname in files:
+            files_this_pass.add(fname)
+            data_file = np.load(fname)
             if str(data_file['source']) != self.receiver:
                 raise ValueError("{} does not match {}.".format(str(data_file['source']), self.receiver))
             n = -1
@@ -413,48 +417,78 @@ class SpectrumPeak(rids.Rids):
                 if not ap:
                     n += 1
                 a, p = amap[ap]
-                ant[a][p]['times'].append(datetime.datetime.utcfromtimestamp(t))
-                ant[a][p]['val'].append(list(data_file['average'][n, :, ap]))
-                ant[a][p]['maxhold'].append(list(data_file['max_hold'][n, :, ap]))
-
-        plens = []
+                tstamp = datetime.datetime.utcfromtimestamp(t)
+                try:
+                    ant[a][p]['val'].append(list(data_file['average'][n, :, ap]))
+                    ant[a][p]['maxhold'].append(list(data_file['max_hold'][n, :, ap]))
+                    ant[a][p]['times'].append(tstamp)
+                except IndexError:
+                    continue
+        # Set antenna-based chunking
+        chunks = {}
         for a in antennas:
+            amax = 0
             for p in poco_pols:
-                plens.append(len(ant[a][p]['times']))
-        mp = max(plens)
-        chunks = list(range(0, mp, sets_per_pol))
-        if len(chunks) > 1 and float(mp - chunks[-1]) / mp < 0.15:
-            chunks[-1] = mp
-        else:
-            chunks.append(mp)
+                lnap = len(ant[a][p]['times'])
+                ant[a][p]['N'] = lnap
+                if lnap > amax:
+                    amax = lnap
+            chunks[a] = list(range(0, amax, sets_per_pol))
+            if len(chunks[a]) > 1 and float(amax - chunks[a][-1]) / amax < 0.15:
+                chunks[a][-1] = amax
+            else:
+                chunks[a].append(amax)
 
         if self.show_progress:
             print("Processing npz into ridz.")
+            headers = []
+            for p in poco_pols:
+                headers.append(p)
+            headers.append('chunks')
+            tabl = []
+            for a in antennas:
+                row = [a]
+                for p in poco_pols:
+                    row.append(ant[a][p]['N'])
+                row.append(len(chunks[a]) - 1)
+                tabl.append(row)
+            print(tabulate.tabulate(tabl, headers=headers))
+
         if self.peaked_on is None:
             self.peaked_on = 'maxhold'
         if peak_on is not None and peak_on in self.feature_components:
             if self.peaked_on != peak_on:
                 self.comment += "\nPeaked on user-supplied {} rather than {}.".format(peak_on, self.peaked_on)
             self.peaked_on = peak_on
-        for ctr in range(len(chunks) - 1):
-            L0, L1 = chunks[ctr], chunks[ctr + 1]
-            for a in antennas:  # Now write the data to ridz files...
+        for a in antennas:  # Now write the data to ridz files...
+            self.antenna = a
+            if self.show_progress:
+                print("\nProcessing antenna {}:", end=' ')
+            for ctr in range(len(chunks[a]) - 1):
+                L0, L1 = chunks[a][ctr], chunks[a][ctr + 1]
                 if self.show_progress:
-                    print("\tWriting for antenna {}:  {} of {}".format(a, ctr + 1, len(chunks) - 1))
-                self.antenna = a
+                    print("{}/{}".format(ctr + 1, len(chunks[a]) - 1), end=' ')
                 self.feature_sets = {}  # Reset the features sets for new files.
                 self.nsets = 0
-                self.timestamp_first = datetime.datetime.strftime(min(ant[a]['E']['times'][L0], ant[a]['N']['times'][L0]), self.time_format)
-                self.timestamp_last = datetime.datetime.strftime(max(ant[a]['E']['times'][L1 - 1], ant[a]['N']['times'][L1 - 1]), self.time_format)
+                self.timestamp_first = datetime.datetime(year=2030, month=1, day=1)
+                self.timestamp_last = datetime.datetime(year=2001, month=12, day=31)
                 for p in poco_pols:
                     if isinstance(data, list):
                         for i in data:
-                            if i == len(ant[a][p]['times'][L0:L1]):
+                            if L0 > len(ant[a][p]['times']):
                                 break
+                            if i > len(ant[a][p]['times'][L0:L1]) - 1:
+                                break
+                            if L1 > len(ant[a][p]['times']):
+                                L1 = len(ant[a][p]['times'])
                             if i < 0:
                                 IL = L1 + i
                             else:
                                 IL = L0 + i
+                            if ant[a][p]['times'][IL] < self.timestamp_first:
+                                self.timestamp_first = ant[a][p]['times'][IL]
+                            if ant[a][p]['times'][IL] > self.timestamp_last:
+                                self.timestamp_last = ant[a][p]['times'][IL]
                             timestamp = datetime.datetime.strftime(ant[a][p]['times'][IL], self.time_format)
                             feature_tag = 'data:{}:{}'.format(timestamp, p)
                             self.feature_sets[feature_tag] = Spectral(polarization=p)
@@ -464,25 +498,33 @@ class SpectrumPeak(rids.Rids):
                             self.nsets += 1
                     if not data_only:
                         for i, t in enumerate(ant[a][p]['times'][L0:L1]):
+                            IL = L0 + i
+                            if t < self.timestamp_first:
+                                self.timestamp_first = t
+                            if t > self.timestamp_last:
+                                self.timestamp_last = t
                             timestamp = datetime.datetime.strftime(t, self.time_format)
                             feature_tag = '{}:{}'.format(timestamp, p)
                             self.feature_sets[feature_tag] = Spectral(polarization=p)
                             find_peaks = Spectral()
                             find_peaks.freq = self.freq
-                            find_peaks.val = ant[a][p][self.peaked_on][i]
+                            find_peaks.val = ant[a][p][self.peaked_on][IL]
                             self.peak_det(find_peaks, delta=self.delta)
                             self.find_bw()
                             self.feature_sets[feature_tag].freq = list(np.array(self.hipk_freq)[self.hipk])
-                            self.feature_sets[feature_tag].val = list(np.array(ant[a][p]['val'][i])[self.hipk])
-                            self.feature_sets[feature_tag].maxhold = list(np.array(ant[a][p]['maxhold'][i])[self.hipk])
+                            self.feature_sets[feature_tag].val = list(np.array(ant[a][p]['val'][IL])[self.hipk])
+                            self.feature_sets[feature_tag].maxhold = list(np.array(ant[a][p]['maxhold'][IL])[self.hipk])
                             self.feature_sets[feature_tag].bw = self.hipk_bw
                             self.nsets += 1
+                self.timestamp_first = datetime.datetime.strftime(self.timestamp_first, self.time_format)
+                self.timestamp_last = datetime.datetime.strftime(self.timestamp_last, self.time_format)
                 fn = self.ridz_out_filename(a, directory)
                 self.writer(fn)
         if not keep_data:
             # ... delete processed files
             for x in files_this_pass:
                 os.remove(x)
+        print("\nDone")
 
     # ##############################################################################################
     # ############################   Spectrum file processing section   ############################

@@ -246,8 +246,10 @@ class SPHandling:
                     self.wf[fc] = calval * np.log10(self.wf[fc])
                 elif unit_converion.startswith('linear'):
                     self.wf[fc] = np.power(self.wf[fc] / calval, 10.0)
-                if csv is not None:
-                    np.savetxt(csv, self.wf[fc], delimiter=',')
+                if csv:
+                    csvfile = '{}_{}'.format(fc, csv)
+                    np.savetxt(csvfile, self.wf[fc], delimiter=',')
+                    print("Writing {}.".format(csvfile))
             if show_edits:
                 plt.figure('max')
                 plt.plot(fadd)
