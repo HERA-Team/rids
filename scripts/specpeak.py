@@ -32,7 +32,7 @@ ap.add_argument('-c', '--comment', help="append a comment or includes comments i
 # parameters just used for generate
 ap.add_argument('--id', help="can be a specific id name or 'all'", default='all')
 ap.add_argument('--ptype', help="data processing file type (if known):  'spfile'/'poco' (None)", default=None)
-ap.add_argument('--keep-data', dest='keep_data', help="keep data after processing", action='store_true')
+ap.add_argument('--delete-data', dest='keep_data', help="keep data after processing", action='store_false')
 ap.add_argument('-#', '--sets-per-pol', dest='sets_per_pol', help="number of sets per pol per file", default=10000)
 ap.add_argument('--share-freq', dest='share_freq', help="invoke if you know all spectra have same freq axis", action="store_true")
 ap.add_argument('--peak-on', dest='peak_on', help="Peak on event component (if other than max->min->val)", default=None)
@@ -45,6 +45,7 @@ ap.add_argument('--ncal', help="N-pol cal filename", default=None)
 # parameters only used in viewing info on existing
 ap.add_argument('--show_fc', help="csv list of feature components to show (if different)", default='all')
 ap.add_argument('--threshold_view', help="new threshold for viewing (if possible)", default=None)
+ap.add_argument('--showtimes', help="simple plot to show key times", action='store_true')
 
 args = ap.parse_args()
 if args.rid_filename == 'fnhelp':
@@ -97,6 +98,8 @@ elif args.keys:
             print('---{}---'.format(k))
             if len(r.feature_sets[k].comment):
                 print('{}'.format(r.feature_sets[k].comment))
+elif args.showtimes:
+    r.showtimes()
 else:
     r.append_comment(args.comment)
     if args.ecal is not None:

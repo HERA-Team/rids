@@ -224,6 +224,31 @@ class SpectrumPeak(rids.Rids):
             plt.plot([fr, fr], [vv, vv2], 'c')
         plt.show()
 
+    def showtimes(self):
+        import datetime
+        spectimes = {}
+        othertimes = {}
+        for f, v in six.iteritems(self.feature_sets):
+            ts = datetime.datetime.strptime(_get_timestr_from_ftr_key(f), "%Y%m%d-%H%M%S")
+            if is_spectrum(f):
+                if v.polarization in spectimes.keys():
+                    spectimes[v.polarization].append(ts)
+                else:
+                    spectimes[v.polarization] = [ts]
+            else:
+                if v.polarization in othertimes.keys():
+                    othertimes[v.polarization].append(ts)
+                else:
+                    othertimes[v.polarization] = [ts]
+
+        for p, v in six.iteritems(spectimes):
+            sp = [1] * len(v)
+            plt.plot(v, sp, '.', label=p)
+        for p, v in six.iteritems(othertimes):
+            op = [2] * len(v)
+            plt.plot(v, op, '.', label=p)
+        plt.show()
+
     def viewer(self, threshold=None, show_components='all', show_data=True):
         """
         Parameters:
@@ -339,7 +364,6 @@ class SpectrumPeak(rids.Rids):
         keep_data:  if False (default) it will delete the processed files, otherwise it will keep
         show_progress:  if True it will display some progress cues, default is False
         """
-        print("This pytpe 'all' approach won't work unless I read the ridm file here...")
         if ptype is None:
             print("NEED TO FIND OUT IF POCO OR SPECTRUM FILES")
             print("if ident =='all' and both in there set ptype to 'all'")
@@ -401,7 +425,7 @@ class SpectrumPeak(rids.Rids):
         for a in antennas:
             ant[a] = {}
             for p in poco_pols:
-                ant[a][p] = {'header': {}, 'times': [], 'N': 0, 'val': [], 'maxhold': []}
+                ant[a][p] = {'header': {}, 'times': [], 'len': 0, 'val': [], 'maxhold': []}
                 amap.append((a, p))
         files_this_pass = set()
         if self.show_progress:
@@ -430,18 +454,21 @@ class SpectrumPeak(rids.Rids):
             amax = 0
             for p in poco_pols:
                 lnap = len(ant[a][p]['times'])
-                ant[a][p]['N'] = lnap
+                ant[a][p]['len'] = lnap
                 if lnap > amax:
                     amax = lnap
             chunks[a] = list(range(0, amax, sets_per_pol))
-            if len(chunks[a]) > 1 and float(amax - chunks[a][-1]) / amax < 0.15:
-                chunks[a][-1] = amax
-            else:
+            if chunks[a][-1] != amax:
                 chunks[a].append(amax)
+                # Below fails for 'data' argument
+                # if len(chunks[a]) > 1 and float(amax - chunks[a][-1]) / amax < 0.15:
+                #     chunks[a][-1] = amax
+                # else:
+                #     chunks[a].append(amax)
 
         if self.show_progress:
             print("Processing npz into ridz.")
-            headers = []
+            headers = ['ant']
             for p in poco_pols:
                 headers.append(p)
             headers.append('chunks')
@@ -449,10 +476,10 @@ class SpectrumPeak(rids.Rids):
             for a in antennas:
                 row = [a]
                 for p in poco_pols:
-                    row.append(ant[a][p]['N'])
+                    row.append(ant[a][p]['len'])
                 row.append(len(chunks[a]) - 1)
                 tabl.append(row)
-            print(tabulate.tabulate(tabl, headers=headers))
+            print(tabulate.tabulate(tabl, headers=headers, tablefmt='grid'))
 
         if self.peaked_on is None:
             self.peaked_on = 'maxhold'
@@ -463,7 +490,7 @@ class SpectrumPeak(rids.Rids):
         for a in antennas:  # Now write the data to ridz files...
             self.antenna = a
             if self.show_progress:
-                print("\nProcessing antenna {}:", end=' ')
+                print("\nProcessing antenna {}:".format(a), end=' ')
             for ctr in range(len(chunks[a]) - 1):
                 L0, L1 = chunks[a][ctr], chunks[a][ctr + 1]
                 if self.show_progress:

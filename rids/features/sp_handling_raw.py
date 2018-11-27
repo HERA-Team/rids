@@ -224,7 +224,7 @@ class SPHandling:
                     ftrunc.append(len(x) - lfrq)
                     y = y[:lfrq]
                 xxx = np.array(y)[self.lo_chan:self.hi_chan]
-                if unit_conversion.startswith('dB') or unit_conversion_startswith('no'):
+                if unit_conversion.startswith('dB') or unit_conversion.startswith('no'):
                     tp = calval * np.log10(np.sum(np.power(10.0, xxx / calval)))
                 elif unit_conversion.startswith('lin'):
                     tp = np.sum(xxx)
@@ -244,7 +244,7 @@ class SPHandling:
                         self.wf[fc][zzz] = np.max(self.wf[fc])
                         self.wf[fc][zzz] = np.min(self.wf[fc]) / 1000.0
                     self.wf[fc] = calval * np.log10(self.wf[fc])
-                elif unit_converion.startswith('linear'):
+                elif unit_conversion.startswith('linear'):
                     self.wf[fc] = np.power(self.wf[fc] / calval, 10.0)
                 if csv:
                     csvfile = '{}_{}'.format(fc, csv)
