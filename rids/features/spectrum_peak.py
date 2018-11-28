@@ -241,12 +241,31 @@ class SpectrumPeak(rids.Rids):
                 else:
                     othertimes[v.polarization] = [ts]
 
-        for p, v in six.iteritems(spectimes):
-            sp = [1] * len(v)
-            plt.plot(v, sp, '.', label=p)
-        for p, v in six.iteritems(othertimes):
-            op = [2] * len(v)
-            plt.plot(v, op, '.', label=p)
+        delta_st = {}
+        delta_ot = {}
+        plt.figure("Sample Times/Steps")
+        for p, tval in six.iteritems(spectimes):
+            delta_st[p] = [0.0]
+            for i in range(len(tval)):
+                if i:
+                    dt = (tval[i] - tval[i - 1]).total_seconds()
+                    if dt > 3600.0:
+                        print("Resetting {:.2f} hours to 0 at {}".format(dt / 3600.0, tval[i]))
+                        dt = 0.0
+                    delta_st[p].append(dt)
+            plt.plot(tval, delta_st[p], '.', label=p + ': raw')
+        for p, tval in six.iteritems(othertimes):
+            delta_ot[p] = []
+            for i in range(len(tval)):
+                if i:
+                    dt = (tval[i] - tval[i - 1]).total_seconds()
+                    if dt > 3600.0:
+                        print("Resetting {:.2f} hours to 0 at {}".format(dt / 3600.0, tval[i]))
+                        dt = 0.0
+                    delta_ot[p].append(dt)
+            plt.plot(tval, delta_ot[p], '.', label=p + ': peaks')
+
+        plt.legend()
         plt.show()
 
     def viewer(self, threshold=None, show_components='all', show_data=True):
