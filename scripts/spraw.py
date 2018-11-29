@@ -12,28 +12,32 @@ import datetime
 from rids import features
 ap = argparse.ArgumentParser()
 
+# Required
 ap.add_argument('file', help="file(s) to use.  If non-RID file, will read in filenames contained in that file.", default=None)
 ap.add_argument('-p', '--pol', help="polarization to use", default=None)
+# Plot types
 ap.add_argument('-w', '--wf', help="plot raw_data feature components as waterfall in that file ('val', 'maxhold', or 'minhold')", default=None)
 ap.add_argument('--stack', help="plot raw_data feature components as stack in that file ( '' or csv list)", default=None)
 ap.add_argument('--stream', help="plot raw_data as time streams in that file ( '' or csv list)", default=None)
 ap.add_argument('--totalpower', help="plot total power (specify dB/dBv/linear/linearv -- not assumes dB)", default=None)
+# Plot modify
 ap.add_argument('-f', '--f-range', dest='f_range', help="range in freq for plots (min,max)", default=None)
-ap.add_argument('-l', '--legend', help="include a legend on stack/stream plots", action='store_true')
+ap.add_argument('-0', '--start-time', dest='start_time', help="start-time to use:  YY-MM-DD.HH:MM[:SS] - default is data start", default=None)
+ap.add_argument('-1', '--stop-time', dest='stop_time', help="stop-time to use:  YY-MM-DD.HH:MM[:SS] - default is data end", default=None)
 ap.add_argument('-k', '--keys', help="plot specific keys - generally use with stack (key1,key2,...)", default=None)
+ap.add_argument('--flip', dest='flip_range', help="Flag to plot converse of t_range", action='store_true')
+# Other plot/print options
+ap.add_argument('--csv', help="Save data array to csv file (<fc>_out.csv).", action='store_true')
 ap.add_argument('--title', help="plot title", default=None)
+ap.add_argument('-l', '--legend', help="include a legend on stack/stream plots", action='store_true')
 ap.add_argument('--all-same-plot', dest='all_same_plot', help="put different feature components on same plot (not wf)", action='store_true')
 ap.add_argument('--wf-fill', dest='wf_time_fill', help="value or scheme to use for missing values if showing wf_gaps", default='default')
 ap.add_argument('--show-edits', dest='show_edits', help="Flag to display info on what was needed to make arrays same length.", action='store_true')
-ap.add_argument('--flip', dest='flip_range', help="Flag to plot converse of t_range", action='store_true')
-ap.add_argument('--csv', help="Save data array to csv file (<fc>_out.csv).", action='store_true')
 # Only used in script
 ap.add_argument('--dB', help="convert to dB (assume values are linear power)", action='store_true')
 ap.add_argument('--linear', help="convert to linear power (assume values are dB)", action='store_true')
 ap.add_argument('--dBv', help="convert to dB (assume values are linear volts)", action='store_true')
 ap.add_argument('--linearv', help="convert to linear voltage (assume values are dB)", action='store_true')
-ap.add_argument('-0', '--start-time', dest='start_time', help="start-time to use:  YY-MM-DD.HH:MM[:SS] - default is data start", default=None)
-ap.add_argument('-1', '--stop-time', dest='stop_time', help="stop-time to use:  YY-MM-DD.HH:MM[:SS] - default is data end", default=None)
 ap.add_argument('--hide-gaps', dest='wf_gaps', help="flag to ignore time gaps in wf plot [the time-scale won't match", action='store_false')
 
 args = ap.parse_args()
