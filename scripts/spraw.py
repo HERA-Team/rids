@@ -13,8 +13,8 @@ from rids import features
 ap = argparse.ArgumentParser()
 
 # Required
-ap.add_argument('file', help="file(s) to use.  If non-RID file, will read in filenames contained in that file.", default=None)
-ap.add_argument('-p', '--pol', help="polarization to use", default=None)
+ap.add_argument('file', help="file(s) to use.  If non-RID file, will read in filenames contained in that file.")
+ap.add_argument('-p', '--pol', help="polarization to use")
 # Plot types
 ap.add_argument('-w', '--wf', help="plot raw_data feature components as waterfall in that file ('val', 'maxhold', or 'minhold')", default=None)
 ap.add_argument('--stack', help="plot raw_data feature components as stack in that file ( '' or csv list)", default=None)
@@ -43,9 +43,6 @@ ap.add_argument('--hide-gaps', dest='wf_gaps', help="flag to ignore time gaps in
 args = ap.parse_args()
 
 args.file = args.file.split(',')
-
-if args.pol is None:
-    raise ValueError("polarization must be set.")
 
 if args.f_range is not None:
     args.f_range = [float(x) for x in args.f_range.split(',')]
