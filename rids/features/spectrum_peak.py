@@ -12,6 +12,7 @@ import copy
 import six
 import numpy as np
 import matplotlib.pyplot as plt
+import datetime
 from .. import rids
 # from . import peaks  # Scipy option
 from . import peak_det  # Another option that seems to do better.
@@ -22,9 +23,11 @@ class Spectral:
     """
     Generic spectral class, with the 'basics' initialized.  The other fields may get added
     as appropriate.
-    For now, the order matters for 'spectral_fields' since used to order peak-finding priority
+    For now, the order matters since used to order peak-finding priority
     """
-    spectral_fields = ['maxhold', 'minhold', 'val', 'comment', 'polarization', 'freq', 'bw']
+    data_spectral_class_fields = ['maxhold', 'minhold', 'val']
+    other_spectral_class_fields = ['comment', 'polarization', 'freq', 'bw']
+    all_spectral_class_fields = data_spectral_class_fields + other_spectral_class_fields
 
     def __init__(self, polarization='', comment=''):
         self.comment = comment
@@ -43,10 +46,9 @@ class FileSet:
         self.included_feature_components = set()
         # Each of these below is per polarization
         self.timestamps = {}
-        # ...for clarity, manually set feature_components from subset of spectral_fields above
-        self.maxhold = {}
-        self.minhold = {}
-        self.val = {}
+        spec = Spectral()
+        for dscf in spec.data_spectral_class_fields:
+            setattr(self, dscf, {})
 
     def chunk_it(self, chunk_set):
         self.chunked = {}
@@ -135,12 +137,11 @@ class SpectrumPeak(rids.Rids):
         self.feature_sets = {}
         # Other attributes
         feature_set_info = Spectral()
-        self.feature_components = feature_set_info.spectral_fields
+        self.feature_components = feature_set_info.all_spectral_class_fields
         self.hipk = None
         self.hipk_bw = None
         self.view_ongoing_features = view_ongoing
         self.share_freq = share_freq
-        self.cal_files_present = False
         self.all_lowercase_polarization_names = [x.lower() for x in self.sp__polarizations]
 
     # Redefine the reader/writer/info base modules
@@ -225,7 +226,6 @@ class SpectrumPeak(rids.Rids):
         plt.show()
 
     def showtimes(self):
-        import datetime
         spectimes = {}
         othertimes = {}
         for f, v in six.iteritems(self.feature_sets):
@@ -339,13 +339,51 @@ class SpectrumPeak(rids.Rids):
                 continue
         plt.show()
 
-    def read_cal(self, filename, polarization):
-        tag = 'cal.' + filename + '.'
-        self.cal_files_present = True
+    def read_cal(self, filename, time_stamp, polarization):
+        """
+        This would allow you to specify an "external" calibration
+        """
+        tag = 'cal:' + time_stamp + ':'
         self.get_feature_set_from_files(tag, polarization, val=filename)
 
+    def get_cal_feature_keys(self):
+        cals = {}
+        for ftr_key in self.feature_sets.keys():
+            des, ts, pol = sp_utils.parse_feature_key(ftr_key)
+            if des.startswith('cal'):
+                caltime = datetime.datetime.strptime(ts, self.time_format)
+                cals[caltime] = ftr_key
+
     def apply_cal(self):
-        print("NOT IMPLEMENTED YET: Apply the calibration, if available.")
+        """
+        This assumes that all of the cal info is in feature_sets.  It finds all of
+        the cal info, then goes through and applies the cal file preceding it in time.
+        If one doesn't exist, it doesn't modify.
+        """
+        cals = self.get_cal_feature_keys()
+
+        cals_sorted = sorted(list(cals.keys()))
+        for ftr_key in self.feature_sets.keys():
+            des, ts, pol = sp_utils.parse_feature_key(ftr_key)
+            if des.startswith('dat'):
+                ftrtime = datetime.datetime.strptime(ts, self.time_format)
+                for dtype in self.feature_sets[ftr_key].data_spectral_class_fields:
+                    this_cal = None
+                    try:
+                        this_data = np.array(getattr(self.feature_sets[ftr_key], dtype))
+                    except AttributeError:
+                        continue
+                    for ct in cals_sorted:
+                        cdes, cts, cpol = sp_utils.parse_feature_key(cals[ct])
+                        if ftrtime > ct and cpol == pol:
+                            try:
+                                this_cal = np.array(getattr(self.feature_sets[cals[ct]], dtype))
+                            except AttributeError:
+                                continue
+                            break
+                    # this_cal will either hold array or string saying something like 'stop' or 'none'
+                    if this_cal is not None and not isinstance(this_call, six.string_types):
+                        setattr(self.feature_sets[ftr_key], dtype, list(this_data + this_cal))
 
     def ridz_out_filename(self, idkey, directory='./'):
         # Get overall meta-data for filename
@@ -416,7 +454,6 @@ class SpectrumPeak(rids.Rids):
         show_progress:  if True it will display some progress cues, default is False
         """
         import glob
-        import datetime
         if show_progress:
             import tabulate
         self.show_progress = show_progress
@@ -641,8 +678,6 @@ class SpectrumPeak(rids.Rids):
                 self.fmin = 1E9
                 self.fmax = -1E9
                 self.timestamp_first, self.timestamp_last = file_idp[idkey].chunked_time_limits[i][0], file_idp[idkey].chunked_time_limits[i][-1]
-                if self.cal_files_present:
-                    print("NOT IMPLEMENTED.  Need to rewrite the cal files.")
                 self.feature_sets = {}  # Reset the features sets for new file.
                 self.nsets = 0
                 files_this_pass = set()

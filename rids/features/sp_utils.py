@@ -9,6 +9,14 @@ Utility functions for SpectrumPeak
 from __future__ import print_function, absolute_import, division
 
 
+def parse_feature_key(ftr_key):
+    data = ftr_key.split(':')
+    des = data[0].lower()
+    ts = data[1]
+    pol = data[2].lower()
+    return des, ts, pol
+
+
 def get_duration_in_std_units(duration, use_unit=None):
     """
     Returns a duration in units based on either:

@@ -14,7 +14,7 @@ ap = argparse.ArgumentParser()
 
 # Required
 ap.add_argument('file', help="file(s) to use.  If non-RID file, will read in filenames contained in that file.")
-ap.add_argument('-p', '--pol', help="polarization to use")
+ap.add_argument('-p', '--pol', help="polarization to use", default=None)
 # Plot types
 ap.add_argument('-w', '--wf', help="plot raw_data feature components as waterfall in that file ('val', 'maxhold', or 'minhold')", default=None)
 ap.add_argument('--stack', help="plot raw_data feature components as stack in that file ( '' or csv list)", default=None)
@@ -39,8 +39,14 @@ ap.add_argument('--linear', help="convert to linear power (assume values are dB)
 ap.add_argument('--dBv', help="convert to dB (assume values are linear volts)", action='store_true')
 ap.add_argument('--linearv', help="convert to linear voltage (assume values are dB)", action='store_true')
 ap.add_argument('--hide-gaps', dest='wf_gaps', help="flag to ignore time gaps in wf plot [the time-scale won't match", action='store_false')
+ap.add_argument('--apply-cal', dest='apply_cal', help="Apply any calibration in file.", action='store_true')
 
 args = ap.parse_args()
+
+if args.pol is None:
+    print("Must include a polarization")
+    import sys
+    sys.exit(0)
 
 args.file = args.file.split(',')
 
@@ -103,6 +109,10 @@ else:
 # Read in data
 r = features.spectrum_peak.SpectrumPeak()
 r.reader(args.file)
+print("TMP_____")
+f.read_cal('cal.txt', '20190101-000000', 'unk')
+if args.apply_cal:
+    r.apply_cal()
 # Set up data parameters for plot
 s = features.sp_handling_raw.SPHandling(r)
 s.set_feature_keys(pol=args.pol, keys=args.keys)
