@@ -343,7 +343,7 @@ class SpectrumPeak(rids.Rids):
 
     def read_cal(self, filename, time_stamp, polarization):
         """
-        This would allow you to specify an "external" calibration
+        This allows you to include an "external" calibration from a file
         """
         tag = 'cal:' + time_stamp + ':'
         self.get_feature_set_from_files(tag, polarization, val=filename)
