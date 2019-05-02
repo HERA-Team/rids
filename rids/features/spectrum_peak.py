@@ -364,6 +364,9 @@ class SpectrumPeak(rids.Rids):
         If one doesn't exist, it doesn't modify.
         """
         cals = self.get_cal_feature_keys()
+        if not len(cals):
+            print("No cal features found.")
+            return
 
         cals_sorted = sorted(list(cals.keys()))
         for ftr_key in self.feature_sets.keys():
