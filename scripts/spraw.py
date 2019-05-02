@@ -50,6 +50,8 @@ if args.pol is None:
     sys.exit(0)
 
 args.file = args.file.split(',')
+if len(args.file) == 1:
+    args.file = args.file[0]
 
 if args.f_range is not None:
     args.f_range = [float(x) for x in args.f_range.split(',')]
@@ -93,6 +95,9 @@ if args.stream is not None:
 
 if args.totalpower is not None:
     args.totalpower = args.totalpower.split(',')
+
+if args.extern_cal is not None:
+    args.apply_cal = True
 
 if args.wf_gaps:
     try:
