@@ -26,7 +26,7 @@ class SPHandling:
         self.rid = rid_class
         self.feature_keys_found = False
 
-    def set_feature_keys(self, pol, keys=None):
+    def set_feature_keys(self, pol, keys=None, ftype='data'):
         """
         Finds the keys corresponding to spectra, or checks/sorts a given list.
         Sets self.feature_keys, the sorted list of keys of _spectrum_ data.
@@ -34,8 +34,11 @@ class SPHandling:
 
         Parameters:
         ------------
+        pol:  polarization
         keys:  desired keys to check - None or 'all' returns all spectrum keys
+        ftype:  feature type [data/cal/all]
         """
+        ftype = ftype.lower()
         self.specific_keys = False
         if isinstance(keys, six.string_types):
             keys = keys.split(',')
@@ -49,8 +52,9 @@ class SPHandling:
         self.polarization = '{}'.format(pol)
         pol = pol.upper()
         for fs in sorted_ftr_keys:
-            if pol == self.rid.feature_sets[fs].polarization.upper() and spectrum_peak.is_spectrum(fs):
-                self.feature_keys.append(fs)
+            if ftype == 'all' or fs.startswith(ftype):
+                if pol == self.rid.feature_sets[fs].polarization.upper() and spectrum_peak.is_spectrum(fs):
+                    self.feature_keys.append(fs)
         self.feature_keys_found = bool(len(self.feature_keys))
         if not self.feature_keys_found:
             print("No keys found for requested values.")

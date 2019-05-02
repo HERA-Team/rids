@@ -40,6 +40,7 @@ ap.add_argument('--dBv', help="convert to dB (assume values are linear volts)", 
 ap.add_argument('--linearv', help="convert to linear voltage (assume values are dB)", action='store_true')
 ap.add_argument('--hide-gaps', dest='wf_gaps', help="flag to ignore time gaps in wf plot [the time-scale won't match", action='store_false')
 ap.add_argument('--apply-cal', dest='apply_cal', help="Apply any calibration in file.", action='store_true')
+ap.add_argument('--extern-cal', dest='extern_cal', help="Apply an external cal data-file <filename>:<timestamp>", default=None)
 
 args = ap.parse_args()
 
@@ -109,9 +110,11 @@ else:
 # Read in data
 r = features.spectrum_peak.SpectrumPeak()
 r.reader(args.file)
-print("TMP_____")
-f.read_cal('cal.txt', '20190101-000000', 'unk')
 if args.apply_cal:
+    if args.extern_cal is not None:
+        externcal_fn = args.extern_cal.split(':')[0]
+        externcal_ts = args.extern_cal.split(':')[1]
+        r.read_cal(externcal_fn, externcal_ts, args.pol)
     r.apply_cal()
 # Set up data parameters for plot
 s = features.sp_handling_raw.SPHandling(r)

@@ -17,6 +17,7 @@ from .. import rids
 # from . import peaks  # Scipy option
 from . import peak_det  # Another option that seems to do better.
 from . import bw_finder
+from . import sp_utils
 
 
 class Spectral:
@@ -122,6 +123,7 @@ class SpectrumPeak(rids.Rids):
     def __init__(self, comment='', share_freq=False, view_ongoing=False):
         # Initialize base attributes
         super(SpectrumPeak, self).__init__(comment)
+        self.show_progress = False
 
         # Initialize feature_module attributes
         for d in self.sp__direct_attributes:
@@ -353,6 +355,7 @@ class SpectrumPeak(rids.Rids):
             if des.startswith('cal'):
                 caltime = datetime.datetime.strptime(ts, self.time_format)
                 cals[caltime] = ftr_key
+        return cals
 
     def apply_cal(self):
         """
@@ -382,7 +385,7 @@ class SpectrumPeak(rids.Rids):
                                 continue
                             break
                     # this_cal will either hold array or string saying something like 'stop' or 'none'
-                    if this_cal is not None and not isinstance(this_call, six.string_types):
+                    if this_cal is not None and not isinstance(this_cal, six.string_types):
                         setattr(self.feature_sets[ftr_key], dtype, list(this_data + this_cal))
 
     def ridz_out_filename(self, idkey, directory='./'):
