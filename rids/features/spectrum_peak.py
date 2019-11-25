@@ -389,7 +389,7 @@ class SpectrumPeak(rids.Rids):
                             break
                     # this_cal will either hold array or string saying something like 'stop' or 'none'
                     if this_cal is not None and not isinstance(this_cal, six.string_types):
-                        setattr(self.feature_sets[ftr_key], dtype, list(this_data + this_cal))
+                        setattr(self.feature_sets[ftr_key], dtype, list(this_data - this_cal))
 
     def ridz_out_filename(self, idkey, directory='./'):
         # Get overall meta-data for filename

@@ -288,7 +288,7 @@ class SPHandling:
             plt.ylabel('{} after {}'.format(ts_unit, self.time_space[fc][0]))
             plt.colorbar()
 
-    def raw_2D_plot(self, plot_type, legend=False, all_same_plot=False, title=None):
+    def raw_2D_plot(self, plot_type, stack_ave=False, legend=False, all_same_plot=False, title=None):
         # plot data (other)
         if not self.feature_keys_found:
             return None
@@ -314,6 +314,8 @@ class SPHandling:
                 plt.xlabel('{} after {}'.format(ts_unit, self.time_space[fc][0]))
                 plt.ylabel('Power [{}]'.format(punit))
             elif plot_type == 'stack':
+                if stack_ave:
+                    averaged_stack = np.zeros(len(self.freq_space))
                 for i, ts in enumerate(self.used_keys[fc]):
                     if self.specific_keys:
                         time_label = self.used_keys[fc][i]
@@ -321,8 +323,15 @@ class SPHandling:
                         time_label = "{} {}".format(ts, ts_unit)
                     if all_same_plot:
                         time_label = fc + ': ' + time_label
-                    plt.plot(self.freq_space, self.wf[fc][i, :], label=time_label)
-                print("Number of plots: {}".format(len(self.used_keys)))
+                    if stack_ave:
+                        averaged_stack += self.wf[fc][i, :]
+                    else:
+                        plt.plot(self.freq_space, self.wf[fc][i, :], label=time_label)
+                if stack_ave:
+                    averaged_stack /= len(self.used_keys[fc])
+                    plt.plot(self.freq_space, averaged_stack)
+                else:
+                    print("Number of plots: {}".format(len(self.used_keys)))
                 plt.xlabel('Freq [{}]'.format(self.rid.freq_unit))
                 plt.ylabel('Power [{}]'.format(punit))
             if legend:

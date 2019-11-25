@@ -26,6 +26,7 @@ ap.add_argument('-0', '--start-time', dest='start_time', help="start-time to use
 ap.add_argument('-1', '--stop-time', dest='stop_time', help="stop-time to use:  YY-MM-DD.HH:MM[:SS] - default is data end", default=None)
 ap.add_argument('-k', '--keys', help="plot specific keys - generally use with stack (key1,key2,...)", default=None)
 ap.add_argument('--flip', dest='flip_range', help="Flag to plot converse of t_range", action='store_true')
+ap.add_argument('--stack-ave', dest='stack_ave', help="Flag to only plot the stack average", action='store_true')
 # Other plot/print options
 ap.add_argument('--csv', help="Save data array to csv file (<fc>_out.csv).", action='store_true')
 ap.add_argument('--title', help="plot title", default=None)
@@ -40,7 +41,7 @@ ap.add_argument('--dBv', help="convert to dB (assume values are linear volts)", 
 ap.add_argument('--linearv', help="convert to linear voltage (assume values are dB)", action='store_true')
 ap.add_argument('--hide-gaps', dest='wf_gaps', help="flag to ignore time gaps in wf plot [the time-scale won't match", action='store_false')
 ap.add_argument('--apply-cal', dest='apply_cal', help="Apply any calibration in file.", action='store_true')
-ap.add_argument('--extern-cal', dest='extern_cal', help="Apply an external cal data-file <filename>:<timestamp>", default=None)
+ap.add_argument('--extern-cal', dest='extern_cal', help="Apply an external cal data-file <filename>:<YYYYMMDD-HHMM>", default=None)
 
 args = ap.parse_args()
 
@@ -134,7 +135,7 @@ if args.wf is not None:
 if args.stack is not None:
     s.time_filter(args.stack)
     s.process(show_edits=args.show_edits, unit_conversion=unit_conversion, csv=args.csv)
-    s.raw_2D_plot(plot_type='stack', legend=args.legend, all_same_plot=args.all_same_plot, title=args.title)
+    s.raw_2D_plot(plot_type='stack', stack_ave=args.stack_ave, legend=args.legend, all_same_plot=args.all_same_plot, title=args.title)
 if args.stream is not None:
     s.time_filter(args.stream)
     s.process(show_edits=args.show_edits, unit_conversion=unit_conversion, csv=args.csv)
