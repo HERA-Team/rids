@@ -121,8 +121,15 @@ class Rids(object):
             print("Reading {}".format(filename))
             self._reader(filename)
 
-    def _reader(self, filename, feature_direct=[], feature_unit=[]):
+    def _reader(self, filename, feature_direct=None, feature_unit=None):
         self.rid_file = filename
+        
+        if feature_direct is None:
+            feature_direct = []
+
+        if feature_unit is None:
+            feature_unit = []
+
         file_type = filename.split('.')[-1].lower()
         if file_type == 'ridz':
             r_open = gzip.open
@@ -150,10 +157,16 @@ class Rids(object):
     def writer(self, filename, fix_list=True):
         self._writer(filename, fix_list=fix_list)
 
-    def _writer(self, filename, feature_direct=[], feature_unit=[], fix_list=True):
+    def _writer(self, filename, feature_direct=None, feature_unit=None, fix_list=True):
         """
         This writes a RID file with a full structure.  If a field is None it ignores.
         """
+        if feature_direct is None:
+            feature_direct = []
+
+        if feature_unit is None:
+            feature_unit = []
+
         ds = {}
         for d in self.direct_attributes:
             val = getattr(self, d)
@@ -193,8 +206,14 @@ class Rids(object):
     def info(self):
         self._info()
 
-    def _info(self, feature_direct=[], feature_unit=[], dirlen=50):
+    def _info(self, feature_direct=None, feature_unit=None, dirlen=50):
         print("RIDS Information")
+        if feature_direct is None:
+            feature_direct = []
+
+        if feature_unit is None:
+            feature_unit = []
+
         for d in self.direct_attributes:
             val = getattr(self, d)
             if len(str(val)) > dirlen:
