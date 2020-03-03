@@ -9,3 +9,4 @@ from . import sp_utils
 from . import bw_finder
 from . import peak_det
 from . import peaks
+from .spectrum_peak import SpectrumPeak
