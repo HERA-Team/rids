@@ -13,7 +13,7 @@ import six
 import numpy as np
 import matplotlib.pyplot as plt
 import datetime
-from .. import rids
+from rids import rids
 # from . import peaks  # Scipy option
 from . import peak_det  # Another option that seems to do better.
 from . import bw_finder
@@ -29,6 +29,7 @@ class Spectral:
     data_spectral_class_fields = ['maxhold', 'minhold', 'val']
     other_spectral_class_fields = ['comment', 'polarization', 'freq', 'bw']
     all_spectral_class_fields = data_spectral_class_fields + other_spectral_class_fields
+    spectral_fields = all_spectral_class_fields
 
     def __init__(self, polarization='', comment=''):
         self.comment = comment
