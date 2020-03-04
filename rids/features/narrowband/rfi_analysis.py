@@ -175,3 +175,93 @@ def isolate_rfi_stations(vis_uvd, rfi_uvd=None, detrend='medfilt',
     rfi_station_uvd.flag_array = new_rfi_flags
     return rfi_station_uvd
 
+def characterize_rfi_stations(rfi_station_uvd, duty_cycle_cut=0.1):
+    """
+    Take an RFI Station UVData object and characterize the transmitters.
+
+    Parameters
+    ----------
+    rfi_station_uvd : UVData
+        UVData object containing the RFI data to be characterized.
+
+    duty_cycle_cut : float, optional
+        Value between 0 and 1 designating the fraction of time a channel 
+        must be flagged in order to identify a narrowband transmitter at 
+        that channel's frequency. Default setting is 0.1.
+
+    Returns
+    -------
+    rfi_station_parameters : dict
+        Dictionary containing a summary of the RFI station parameters. 
+        Currently, the parameters reported are as follows:
+            transmitter_frequencies : center broadcasting frequency of 
+                                      each transmitter
+            transmitter_bandwidths : approximate bandwidth of each transmitter
+            duty_cycles : fraction of time each transmitter is on
+            signal_strengths : amplitude of transmitter visibility
+            signal_strength_stds : standard deviation of each signal strength
+
+        Frequency units are in Hz, visibility units are whatever units are 
+        used by rfi_station_uvd.
+    """
+    # pull some useful metadata
+    baselines = np.unique(rfi_station_uvd.baseline_array)
+    pols = rfi_station_uvd.get_pols()
+    freqs = rfi_station_uvd.freq_array.flatten()
+    df = np.median(np.diff(freqs))
+
+    rfi_info = {}
+
+    for baseline in baselines:
+        for pol in pols:
+            # setup
+            baseline = rfi_station_uvd.baseline_to_antnums(baseline)
+            antpairpol = baseline + (pol,)
+            if pol not in rfi_info:
+                rfi_info[pol] = {}
+            if baseline not in rfi_info[pol]:
+                rfi_info[pol][baseline] = {}
+
+            this_rfi = rfi_station_uvd.get_data(antpairpol)
+            flags = rfi_station_uvd.get_flags(antpairpol)
+
+            transmitter_freqs, transmitter_widths = find_transmitters(
+                flags, freqs, duty_cycle_cut
+            )
+
+            duty_cycles = []
+            sig_strengths = []
+            strength_stds = []
+            for freq, width in zip(transmitter_freqs, transmitter_widths):
+                freq_in_freqs = [fq == freq for fq in freqs]
+                if any(freq_in_freqs):
+                    transmit_chans = freq_in_freqs.index(True)
+                else:
+                    transmit_chans = np.argwhere(
+                        np.abs(freqs - freq) <= width
+                    ).flatten()
+
+                transmit_slice = (slice(None), transmit_chans)
+                transmit_rfi = this_rfi[transmit_slice]
+                transmit_flags = flags[transmit_slice]
+
+                duty_cycle = np.mean(transmit_flags, axis=0)
+                sig_strength = np.amax(np.abs(transmit_rfi), axis=0)
+                strength_std = np.std(
+                    np.abs(transmit_rfi[transmit_flags]), axis=0
+                )
+
+                duty_cycles.append(np.mean(duty_cycle))
+                sig_strengths.append(np.mean(sig_strength))
+                strength_stds.append(np.mean(strength_std))
+
+            rfi_info[pol][baseline]["transmitter_frequencies"] = transmitter_freqs
+            rfi_info[pol][baseline]["transmitter_bandwidths"] = transmitter_widths
+            rfi_info[pol][baseline]["duty_cycles"] = duty_cycles
+            rfi_info[pol][baseline]["signal_strengths"] = sig_strengths
+            rfi_info[pol][baseline]["signal_strength_stds"] = sig_strength_stds
+            
+    return rfi_info
+
+# TODO: add a function for further reducing the rfi_info dict from above func
+# i.e. give a summary over all pols/baselines
