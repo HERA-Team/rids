@@ -7,11 +7,6 @@ import glob
 import os
 import re
 
-import numpy as np
-from astropy import constants, units
-
-import itertools
-import uvtools
 import pyuvdata
 from pyuvdata import UVData
 
@@ -179,12 +174,16 @@ def uvd_downselect(uvd, use_ants=None, use_bls=None, use_pols='linear',
     """
     # handle different types for ``uvd``
     if isinstance(uvd, str):
-        uvd = uvd.read(uvd)
+        uvd_ = uvd
+        uvd = UVData()
+        uvd = uvd.read(uvd_)
     elif isinstance(uvd, UVData):
         pass
     elif isinstance(uvd, (list, tuple)):
         if all([isinstance(uvd_, str) for uvd_ in uvd]):
-            uvd = uvd.read(uvd)
+            uvd_ = uvd
+            uvd = UVData()
+            uvd = uvd.read(uvd_)
         elif all([isinstance(uvd_, UVData) for uvd_ in uvd]):
             _uvd = uvd[0]
             for uvd_ in uvd[1:]:
@@ -268,3 +267,4 @@ def uvd_downselect(uvd, use_ants=None, use_bls=None, use_pols='linear',
 
     # all the downselecting should be done at this point
     return uvd
+
