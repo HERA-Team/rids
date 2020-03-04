@@ -265,3 +265,92 @@ def characterize_rfi_stations(rfi_station_uvd, duty_cycle_cut=0.1):
 
 # TODO: add a function for further reducing the rfi_info dict from above func
 # i.e. give a summary over all pols/baselines
+
+def find_transmitters(flags, freqs, duty_cycle_cut):
+    """
+    Use a flag array to identify transmitter frequencies/bandwidths.
+
+    Parameters
+    ----------
+    flags : np.ndarray
+        Flag array on which to perform the analysis.
+
+    freqs : array-like
+        Frequency array corresponding to the flag array's frequency axis.
+
+    duty_cycle_cut : float
+        Number between 0 and 1 specifying the minimum fraction of time a 
+        channel must be flagged to be considered to contain a transmitter.
+
+    Returns
+    -------
+    transmitter_freqs : list
+        List of the estimated center frequency for each narrowband transmitter.
+
+    transmitter_widths : list
+        List of the estimated bandwidth for each narrowband transmitter.
+    """
+    freqs = np.array(freqs).flatten()
+    df = np.median(np.diff(freqs))
+
+    duty_cycles = np.mean(flags, axis=0)
+    transmit_chans = np.argwhere(duty_cycles > duty_cycle_cut).flatten()
+    transmitter_freqs = []
+    transmitter_widths = []
+    for ch_ind, chan in enumerate(transmitter_chans):
+        before, after = check_nearby_channels(chan, transmit_chans)
+        if not (before or after):
+            # transmitter contained to a single frequency channel
+            transmitter_freqs.append(freqs[chan])
+            transmitter_widths.append(df)
+            continue
+
+        min_chan, max_chan = chan, chan
+        min_ind, max_ind = ch_ind, ch_ind
+
+        while before:
+            min_ind -= 1
+            min_chan = transmit_chans[min_ind]
+            before = check_nearby_channels(min_chan, transmit_chans)[0]
+
+        while after:
+            max_ind += 1
+            max_chan = transmit_chans[max_ind]
+            after = check_nearby_channels(max_chan, transmit_chans)[1]
+
+        trans_freq = 0.5 * (freqs[min_chan] + freqs[max_chan])
+        trans_bw = freqs[max_chan] - freqs[min_chan]
+        if trans_freq not in transmitter_freqs:
+            transmitter_freqs.append(trans_freq)
+            transmitter_widths.append(trans_bw)
+
+    return transmitter_freqs, transmitter_widths
+
+def check_nearby_channels(chan, chans):
+    """
+    Determine if any channels in ``chans`` are adjacent to ``chan``.
+
+    This is merely a helper function for the ``find_transmitters`` function.
+
+    Parameters
+    ----------
+    chan : int
+        Channel of interest.
+
+    chans : array-like of int
+        Array of channel numbers, sorted in increasing order.
+
+    Returns
+    -------
+    before : bool
+        Whether there is a channel directly preceding ``chan`` in ``chans``.
+
+    after : bool
+        Whether there is a channel directly following ``chan`` in ``chans``.
+    """
+    ch_ind = list(chans).index(chan)
+    Nchan = len(chans)
+    
+    after = False if ch_ind == Nchan - 1 else chan + 1 == chans[ch_ind + 1]
+    before = False if ch_ind == 0 else chan - 1 == chans[ch_ind - 1]
+    return before, after
